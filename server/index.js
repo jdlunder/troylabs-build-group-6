@@ -77,21 +77,21 @@ export async function createApplication({ dev = false } = {}) {
       if (role === 'player' && !room.players.has(key) && room.players.size >= 48) return ack({ok:false,error:'The 48 player seats are full. Join Godmode and make trouble instead.'});
       participant = room.participants.get(key);
       if (!participant) {
-        participant = { id: key, name, host, color: palette[room.participants.size % palette.length], sockets: new Set(), lastSeen: Date.now(), lastCommand: 0 };
+        participant = { id: key, publicId:randomUUID(), name, host, color: palette[room.participants.size % palette.length], sockets: new Set(), lastSeen: Date.now(), lastCommand: 0 };
         room.participants.set(key, participant);
       }
       participant.name = name;
       participant.role = role;
       if (role === 'player') {
         let player = room.players.get(key);
-        if (!player) { player = createPlayer(participant, room.players.size); room.players.set(key,player); }
+        if (!player) { player = createPlayer({...participant,id:participant.publicId}, room.players.size); room.players.set(key,player); }
         player.name = name; player.connected = true; player.input = {x:0,z:0,jump:false}; player.inputAt = 0;
       } else room.players.delete(key);
       participant.sockets.add(socket.id);
       joined = room;
       room.lastActivity = Date.now();
       socket.join(code);
-      ack({ ok: true, room: publicRoom(room), host, participant: { id:key,name,color:participant.color,role }, arena:arenaSnapshot(room) });
+      ack({ ok: true, room: publicRoom(room), host, participant: { id:participant.publicId,name,color:participant.color,role }, arena:arenaSnapshot(room) });
       broadcast(room);
     });
     let lastInput = 0;

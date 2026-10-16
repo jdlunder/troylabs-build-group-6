@@ -47,6 +47,7 @@ test('real sockets assign player roles, relay the arena, reject god movement and
     const room=await(await fetch(base+'/api/rooms',{method:'POST'})).json();
     const host=await join(room.code,'god','host',room.hostToken),a=await join(room.code,'player','alice'),b=await join(room.code,'player','bob'),god=await join(room.code,'god','zeus');
     assert.equal(a.result.participant.role,'player');assert.equal(a.result.arena.players.length,1);assert.equal(b.result.arena.players.length,2);
+    assert.equal(JSON.stringify(a.result.arena).includes('guest:alice'),false,'Public avatars must not reveal the private reconnect identity');
     assert.equal((await ack(god.s,'player:input',{x:1,z:0})).ok,false);
     await ack(host.s,'host:action',{action:'start'});
     const observed=new Promise(resolve=>b.s.once('arena:state',resolve));
