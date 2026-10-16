@@ -1,6 +1,8 @@
 # GODMODE
 
-**You play. They rule.** One astronaut on the projector. An entire audience rewrites the universe from their phones.
+**You play. They rule.** Players race as astronauts on their own phones. Godmode users rewrite the shared universe. The projector shows the entire race.
+
+**New: [phone multiplayer setup and presentation script](docs/MULTIPLAYER.md).** Scan once, choose Play or Godmode, and join the same live arena. Players get a 3D view, a following camera, touch direction/jump controls, their own fuel collection, and a race to the rocket. No keyboard is required. Configured for up to 48 player seats; tested with 40 simulated concurrent racers.
 
 A complete live multiplayer experiment built for TroyLabs Builders Night: a procedural 3D world, real QR joining, a phone controller, natural-language rule composition, presenter controls, and a three-minute mission. Collect three energy cells and reach the rocket while the room makes questionable decisions.
 
@@ -30,7 +32,7 @@ For phones, open the presenter page through a publicly reachable HTTPS origin or
 - **Text or one tap:** “moon gravity and rain 6 ducks,” “make the boulders bounce,” “stop lava and give Nova a shield.”
 - **Real live delivery:** a WebSocket event applies the command; a separate authoritative snapshot keeps participants, timers, active rules, and history consistent.
 - **Presenter control:** start, pause/resume, clear chaos, reset the room, guided run, sound, fullscreen, cinema view, and a clearly separate launch finale.
-- **Playable mission:** WASD or arrow keys move; Space jumps. Collect the three glowing cells, then reach the rocket. Lava and objects affect health. Zero health respawns Nova so the presentation can continue.
+- **Phone multiplayer:** choose Play for a named astronaut and touch controls; collect your own three cells and race everyone to the rocket. Shared hazards affect all players. Godmode users keep the full chaos menu. The original solo astronaut remains available when there are no phone racers.
 
 Guided run steers Nova automatically and pauses at fuel stops so the presenter has time to explain and invite audience input. Manual movement takes over immediately when a movement key is pressed. The normal win comes from completing the mission. **Launch finale** is an explicit presenter-triggered ending for a timed presentation.
 

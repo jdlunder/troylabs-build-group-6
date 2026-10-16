@@ -1,5 +1,7 @@
 # Team: get ready in ten minutes
 
+**Latest version: phone multiplayer. Use [MULTIPLAYER.md](MULTIPLAYER.md) for the current stage script.** Everyone scans one QR and chooses Play (live 3D arena with touch movement/jump) or Godmode (change the shared world). The presenter starts the race; the first player to collect three cells and reach the rocket wins. The solo sequence below remains available when nobody joins as Play.
+
 The public app is already hosted: **https://godmode-troylabs.vercel.app**. Only the presenter needs to create a room. Everyone else uses its QR/controller link. Phones need no code, account, API key, or local server.
 
 ## Assign the room

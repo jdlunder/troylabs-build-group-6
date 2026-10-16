@@ -7,7 +7,8 @@ const material = (color, extra = {}) => new THREE.MeshStandardMaterial({ color, 
 const v = (x = 0, y = 0, z = 0) => new THREE.Vector3(x, y, z);
 
 export class Universe {
-  constructor(container, { onProgress = () => {}, preview = false, onError = () => {} } = {}) {
+  constructor(container, { onProgress = () => {}, preview = false, mobile = false, onError = () => {} } = {}) {
+    this.mobile=mobile;this.avatars=new Map();this.networkPlayers=[];this.multiplayer=false;this.ownId=null;this.touchInput={x:0,z:0};
     this.container = container; this.onProgress = onProgress; this.preview = preview;
     this.keys = new Set(); this.objects = []; this.particles = []; this.tiles = [];
     this.effects = {}; this.room = { status: 'lobby' }; this.auto = preview; this.host = preview;
@@ -17,8 +18,8 @@ export class Universe {
     this.scene.fog = new THREE.Fog(0xbfc6e8, 45, 100);
     try { this.renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, powerPreference: 'high-performance' }); }
     catch { onError(); return; }
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
-    this.renderer.shadowMap.enabled = true;
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, mobile?1.25:1.75));
+    this.renderer.shadowMap.enabled = !mobile;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.2;
@@ -182,12 +183,76 @@ export class Universe {
     this.camera.left = -span*aspect/2; this.camera.right = span*aspect/2;
     this.camera.top=span/2; this.camera.bottom=-span/2;
     if(aspect<1.15) { this.camera.left=-14; this.camera.right=14; this.camera.top=14/aspect; this.camera.bottom=-14/aspect; }
+    if(this.mobile){this.camera.left=-8;this.camera.right=8;this.camera.top=8/aspect;this.camera.bottom=-8/aspect;}
     this.camera.updateProjectionMatrix();
   }
   setRoom(room, host) {
     this.room = room; this.host = host; this.effects = Object.fromEntries(room.effects.map(e => [e.id,e]));
+    if(!this.preview && room.players)this.multiplayer=room.players.length>0;
+    if(!this.multiplayer && this.networkPlayers.length)this.setArena({players:[],hazards:[]},this.ownId);
     this.container.dataset.effects=Object.keys(this.effects).join(',');
     if(['won','finale'].includes(room.status) && this.launchedAt===null) this.launch();
+  }
+  setArena(snapshot,ownId) {
+    if(!this.renderer)return;
+    this.ownId=ownId;this.networkPlayers=snapshot.players||[];this.multiplayer=this.networkPlayers.length>0;
+    this.container.dataset.players=String(this.networkPlayers.length);
+    const keep=new Set(this.networkPlayers.map(p=>p.id));
+    for(const [id,avatar] of this.avatars)if(!keep.has(id)){
+      this.scene.remove(avatar.group);avatar.group.traverse(n=>{if(n.isMesh||n.isSprite){n.geometry?.dispose();n.material?.map?.dispose();n.material?.dispose();}});this.avatars.delete(id);
+    }
+    for(const p of this.networkPlayers){
+      let avatar=this.avatars.get(p.id);
+      if(!avatar){avatar=this.makeAvatar(p,p.id===ownId);this.avatars.set(p.id,avatar);avatar.group.position.set(p.x,p.y,p.z);}
+      avatar.target=p;
+    }
+    if(this.multiplayer){
+      this.hero.visible=false;this.heroShadow.visible=false;
+      const desired=new Set((snapshot.hazards||[]).map(h=>h.id));
+      for(const o of [...this.objects])if(!desired.has(o.networkId))this.removeObject(o);
+      for(const h of snapshot.hazards||[]){
+        let o=this.objects.find(o=>o.networkId===h.id);
+        if(!o){this.spawn(h.type,1);o=this.objects[this.objects.length-1];o.networkId=h.id;o.mesh.position.set(h.x,h.y,h.z);}
+        o.target=h;
+      }
+      const own=this.networkPlayers.find(p=>p.id===ownId);
+      this.cells.forEach(c=>c.group.visible=!own?.cells.includes(c.i));
+    }else if(this.launchedAt===null){this.hero.visible=true;this.heroShadow.visible=true;}
+  }
+  predictInput(input){this.touchInput=input;this.touchAt=performance.now();}
+  makeAvatar(p,own){
+    const group=new THREE.Group();this.scene.add(group);
+    const white=material(0xf5f0df),accent=material(p.color),navy=material(0x234860);
+    this.mesh(new THREE.CapsuleGeometry(.3,.42,4,8),white,0,.79,0,group);
+    this.mesh(new THREE.SphereGeometry(.43,12,10),white,0,1.43,0,group);
+    const visor=this.mesh(new THREE.SphereGeometry(.32,10,8),navy,0,1.45,.27,group);visor.scale.set(1,.65,.45);
+    this.box(.57,.2,.16,p.color,0,.9,.3,group);
+    this.mesh(new THREE.CylinderGeometry(.34,.34,.12,10),accent,0,1.12,0,group);
+    const legs=[-1,1].map(side=>this.box(.22,.4,.25,0x33465c,side*.16,.26,0,group));
+    const ring=this.mesh(new THREE.TorusGeometry(own?.66:.5,own?.055:.025,5,24),new THREE.MeshBasicMaterial({color:p.color}),0,.05,0,group);ring.rotation.x=-Math.PI/2;
+    const canvas=document.createElement('canvas');canvas.width=320;canvas.height=64;
+    const ctx=canvas.getContext('2d');ctx.fillStyle=own?'#f5e27e':'#142039';ctx.beginPath();ctx.roundRect(0,0,320,64,18);ctx.fill();ctx.fillStyle=own?'#142039':'#ffffff';ctx.font='600 25px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText((own?'YOU · ':'')+p.name.slice(0,18),160,32,300);
+    const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;
+    const label=new THREE.Sprite(new THREE.SpriteMaterial({map:texture,depthTest:false}));label.scale.set(3,.6,1);label.position.y=2.75;group.add(label);
+    return {group,legs,target:p};
+  }
+  updateArena(dt){
+    const size=this.active('giant')?1.7:this.active('tiny')?.55:1;
+    for(const [id,a] of this.avatars){
+      const p=a.target,before=a.group.position.clone(),blend=1-Math.exp(-18*dt);
+      a.group.position.lerp(v(p.x,p.y,p.z),blend);
+      if(id===this.ownId&&this.room.status==='live'&&performance.now()-(this.touchAt||0)<250){
+        const i=this.touchInput,reverse=this.active('reverse')?-1:1,speed=4.2*(this.active('slow')?.45:1)*reverse;
+        a.group.position.x+=(i.x*.82+i.z*.57)*speed*dt;
+        a.group.position.z+=(-i.x*.57+i.z*.82)*speed*dt;
+      }
+      a.group.rotation.y=p.angle;
+      if(this.mobile && id===this.ownId){this.mobileFocus ||= a.group.position.clone();this.mobileFocus.lerp(a.group.position,.12);}
+      a.group.scale.lerp(v(size,size,size),.1);a.group.visible=this.launchedAt===null;
+      const moving=a.group.position.distanceTo(before)>.003;
+      a.legs.forEach((leg,i)=>leg.rotation.x=moving?Math.sin(this.elapsed*12+i*Math.PI)*.45:0);
+    }
+    for(const o of this.objects)if(o.target){const h=o.target;o.mesh.position.lerp(v(h.x,h.y,h.z),1-Math.exp(-20*dt));if(!['ducks','duckzilla'].includes(o.type))o.mesh.rotation.x+=dt;}
   }
   setAutopilot(value) { this.auto = value; this.keys.clear(); }
   active(id) { return Boolean(this.effects[id] && (this.room.status==='paused' || this.effects[id].expiresAt>Date.now())); }
@@ -198,9 +263,11 @@ export class Universe {
         if(['ducks','boulders'].includes(effect.id)) this.objects.filter(o=>o.type===effect.id).forEach(o=>this.removeObject(o));
         continue;
       }
-      if(effect.id==='ducks' || effect.id==='boulders') this.spawn(effect.id,effect.count || 4);
-      if(effect.id==='duckzilla') this.spawn('duckzilla',1);
-      if(effect.id==='earthquake') this.objects.forEach(object=>{object.velocity.y+=3;});
+      if(!this.multiplayer){
+        if(effect.id==='ducks' || effect.id==='boulders') this.spawn(effect.id,effect.count || 4);
+        if(effect.id==='duckzilla') this.spawn('duckzilla',1);
+        if(effect.id==='earthquake') this.objects.forEach(object=>{object.velocity.y+=3;});
+      }
       if(effect.id==='confetti') this.burst(v(0,4,0),90,true);
       if(effect.id==='heal') { this.health=100; this.burst(this.playerPosition.clone().add(v(0,1,0)),35,true); }
     }
@@ -277,7 +344,7 @@ export class Universe {
     if(this.health===0) { this.playerPosition.set(-6.6,1,3.5); this.playerVelocity.set(0,0,0); this.health=100; }
     this.emitProgress();
   }
-  emitProgress(won=false) { if(this.host && !this.preview) this.onProgress({cells:this.collected.size,health:this.health,won}); }
+  emitProgress(won=false) { if(this.host && !this.preview && !this.multiplayer) this.onProgress({cells:this.collected.size,health:this.health,won}); }
   updatePlayer(dt) {
     if(this.launchedAt!==null) return;
     let dx=0,dz=0;
@@ -387,7 +454,9 @@ export class Universe {
   }
   updateVisuals(dt) {
     const shake=this.active('earthquake')?.24:0;
-    this.camera.position.set(21+Math.sin(this.elapsed*57)*shake,24+Math.cos(this.elapsed*43)*shake*.6,29+Math.sin(this.elapsed*39)*shake);
+    const focus=this.mobileFocus||v();
+    this.camera.position.set(21+focus.x+Math.sin(this.elapsed*57)*shake,24+Math.cos(this.elapsed*43)*shake*.6,29+focus.z+Math.sin(this.elapsed*39)*shake);
+    if(this.mobile)this.camera.lookAt(focus.x,1.3,focus.z);
     const lava=this.active('lava'),ice=this.active('ice'),disco=this.active('disco');
     this.tiles.forEach((tile,i)=>{
       const color=disco?new THREE.Color().setHSL((this.elapsed*.08+i*.035)%1,.5,.63):new THREE.Color(lava?0xef7558:ice?0xafe7ed:tile.userData.base);
@@ -399,7 +468,7 @@ export class Universe {
     this.windLines.children.forEach(line=>{line.position.x+=line.userData.speed*dt;if(line.position.x>11)line.position.x=-11;});
     this.cells.forEach(cell=>{cell.group.rotation.y=this.elapsed*.8;cell.group.position.y=1.4+Math.sin(this.elapsed*2+cell.i)*.18;});
     if(lava && Math.random()<dt*12) this.burst(v(rand(-8,8),.1,rand(-5,5)),2);
-    if(this.active('meteors') && this.elapsed-this.lastMeteor>.7 && this.room.status!=='paused') {this.spawn('meteors',1);this.lastMeteor=this.elapsed;}
+    if(!this.multiplayer && this.active('meteors') && this.elapsed-this.lastMeteor>.7 && this.room.status!=='paused') {this.spawn('meteors',1);this.lastMeteor=this.elapsed;}
     if(this.launchedAt!==null) {
       const t=this.elapsed-this.launchedAt;
       this.rocket.position.y=.73+t*t*1.1; this.rocket.rotation.z=Math.sin(t*16)*.008;
@@ -422,7 +491,8 @@ export class Universe {
     const paused=this.room.status==='paused';
     const dt=paused?0:realDt*(this.active('slow')?.45:1);
     this.elapsed+=dt;
-    if(!paused && !['ended'].includes(this.room.status)) {this.updatePlayer(dt);this.updateObjects(dt);}
+    if(this.multiplayer)this.updateArena(paused?0:realDt);
+    else if(!paused && !['ended'].includes(this.room.status)) {this.updatePlayer(dt);this.updateObjects(dt);}
     this.updateVisuals(dt);
     if(this.elapsed-this.lastProgress>.7){this.emitProgress();this.lastProgress=this.elapsed;}
     this.renderer.render(this.scene,this.camera);

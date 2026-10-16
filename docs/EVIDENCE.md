@@ -30,10 +30,17 @@ Recorded 2026-10-16. These are observed checks, not estimates of venue Wi-Fi per
 - A public Chromium flow used two phone pages to spawn DUCKZILLA, add 15 seconds, remove 10 seconds, lock the audience clock, and activate reverse controls. The public room's authoritative total round duration changed to 195000 ms and then 185000 ms. The stage rendered the giant duck and reverse effect with no console errors.
 - `docs/TEAM.md` contains the team roles, editable code paths, collaboration setup, hosting maintainer command, and a timed comedy demo sequence.
 
+## Phone multiplayer verification
+
+- Added explicit Play/Godmode roles, authoritative multiplayer simulation, named astronauts, individual fuel collection, a shared race winner, 3D phone rendering, following camera/objective compass, touch D-pad/jump, and role switching.
+- All 25 unit/integration checks passed, including two independent players, stale input, bounded input, pause, individual fuel/winner semantics, shared hazards/healing/reset, real socket role enforcement and reconnect recovery.
+- The dedicated multiplayer load test passed with 40 simultaneous simulated racers plus a Godmode controller: shared hazards, movement, live snapshots, denied cross-role actions, freeze on pause, and reset keeping all 40 players. The original 40-controller rule-delivery test also passed.
+- A local Chromium browser flow opened a projector and three phone-sized pages: two players and one Godmode user. Both phones rendered the same live 3D arena; held movement and jump controls were exercised; a four-power command appeared on phone and stage; pause disabled touch; switching roles and reset succeeded. No page errors were reported. Phone and stage screenshots were visually inspected.
+
 ## Remaining evidence boundaries
 
 - No real 40-person audience or venue Wi-Fi test has been performed.
 - Optional model-provider interpretation has not been exercised with live credentials.
 - Commands become validated effect data. This build does not execute generated JavaScript or invent new mechanics on demand.
-- The main stage is the physics simulator. Room state is in one server process's memory and is cleared by a server restart.
+- Multiplayer physics runs on the server. The optional solo astronaut still simulates in the main stage browser. Room state is in one server process's memory and is cleared by a server restart.
 - Container and Render/Railway configurations are included; configuration files alone are not deployment evidence.

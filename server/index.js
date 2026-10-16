@@ -8,6 +8,7 @@ import { Server } from 'socket.io';
 import { compileCommand, planSchema } from './compiler.js';
 import { rooms, createRoom, publicRoom, applyPlan, expireEffects, hostAction } from './rooms.js';
 import { cleanText, EFFECTS, ROUND_MS } from '../shared/catalog.js';
+import { createPlayer, setPlayerInput, stepArena, arenaSnapshot, applyArenaCommand } from './multiplayer.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const palette = ['#f9dc7b', '#c5b0ff', '#9de3d7', '#ffa7a1', '#a2cbff', '#f3ace0'];
@@ -72,22 +73,41 @@ export async function createApplication({ dev = false } = {}) {
       const name = host ? 'Mission control' : (cleanText(payload.name, 22) || 'Anonymous deity');
       // A guest-supplied client ID cannot recover presenter privileges.
       const key = (host ? 'host:' : 'guest:') + id;
+      const role = !host && payload.role === 'player' ? 'player' : 'god';
+      if (role === 'player' && !room.players.has(key) && room.players.size >= 48) return ack({ok:false,error:'The 48 player seats are full. Join Godmode and make trouble instead.'});
       participant = room.participants.get(key);
       if (!participant) {
         participant = { id: key, name, host, color: palette[room.participants.size % palette.length], sockets: new Set(), lastSeen: Date.now(), lastCommand: 0 };
         room.participants.set(key, participant);
       }
       participant.name = name;
-      participant.lastSeen = Date.now();
+      participant.role = role;
+      if (role === 'player') {
+        let player = room.players.get(key);
+        if (!player) { player = createPlayer(participant, room.players.size); room.players.set(key,player); }
+        player.name = name; player.connected = true; player.input = {x:0,z:0,jump:false}; player.inputAt = 0;
+      } else room.players.delete(key);
       participant.sockets.add(socket.id);
       joined = room;
       room.lastActivity = Date.now();
       socket.join(code);
-      ack({ ok: true, room: publicRoom(room), host, participant: { name, color: participant.color } });
+      ack({ ok: true, room: publicRoom(room), host, participant: { id:key,name,color:participant.color,role }, arena:arenaSnapshot(room) });
       broadcast(room);
+    });
+    let lastInput = 0;
+    socket.on('player:input',(payload={},ack=()=>{})=>{
+      if(!joined || participant?.role!=='player')return ack({ok:false,error:'Choose Play to control an astronaut.'});
+      const player=joined.players.get(participant.id);
+      if(!player)return ack({ok:false,error:'Rejoin the race.'});
+      const now=Date.now();
+      if(now-lastInput<20)return ack({ok:true});
+      lastInput=now;
+      if(joined.status!=='live'){player.input={x:0,z:0,jump:false};return ack({ok:false,error:'Wait for mission control to start.'});}
+      ack({ok:setPlayerInput(player,payload,now)});
     });
     socket.on('world:command', async (payload = {}, ack = () => {}) => {
       if (!joined || !participant) return ack({ ok: false, error: 'Join the universe first.' });
+      if (participant.role === 'player') return ack({ok:false,error:'Switch to Godmode to rewrite the world.'});
       if (joined.status === 'paused') return ack({ ok: false, error: 'The presenter paused the universe. Hold that thought.' });
       if (['won', 'ended', 'finale'].includes(joined.status)) return ack({ ok: false, error: 'That round is complete. A new universe is coming.' });
       const requestId = cleanText(payload.requestId, 64);
@@ -115,6 +135,7 @@ export async function createApplication({ dev = false } = {}) {
         }
         const author = { name: participant.name, color: participant.color };
         const event = applyPlan(joined, plan, author, text);
+        applyArenaCommand(joined, plan);
         const receipt = { ok: true, event, serverMs: Date.now() - now };
         if (requestId) {
           joined.receipts.set(receiptKey, receipt);
@@ -131,12 +152,13 @@ export async function createApplication({ dev = false } = {}) {
       if (!isHost()) return ack({ ok: false, error: 'Presenter controls are private.' });
       if (!['start', 'pause', 'reset', 'clear', 'finale', 'lockclock'].includes(payload.action)) return ack({ ok: false, error: 'Unknown presenter control.' });
       hostAction(joined, payload.action);
+      if(payload.action==='clear')joined.hazards=[];
       io.to(joined.code).emit('world:control', { action: payload.action, round: joined.round });
       broadcast(joined);
       ack({ ok: true });
     });
     socket.on('world:progress', (payload = {}) => {
-      if (!isHost() || !['live', 'lobby'].includes(joined.status)) return;
+      if (!isHost() || !['live', 'lobby'].includes(joined.status) || [...joined.players.values()].some(p=>p.connected!==false)) return;
       joined.progress = {
         cells: Math.max(0, Math.min(3, Math.floor(Number(payload.cells) || 0))),
         health: Math.max(0, Math.min(100, Math.floor(Number(payload.health) || 0))),
@@ -152,16 +174,34 @@ export async function createApplication({ dev = false } = {}) {
     socket.on('disconnect', () => {
       if (!joined || !participant) return;
       participant.sockets.delete(socket.id);
+      if(participant.sockets.size===0 && joined.players.has(participant.id)){
+        const player=joined.players.get(participant.id);player.connected=false;player.input={x:0,z:0,jump:false};
+      }
       participant.lastSeen = Date.now();
       broadcast(joined);
     });
   });
+  let arenaTick=0, lastArenaAt=Date.now();
+  const arenaInterval=setInterval(()=>{
+    const now=Date.now(),dt=Math.min((now-lastArenaAt)/1000,.1);lastArenaAt=now;arenaTick++;
+    for(const room of rooms.values()){
+      if(!room.players.size)continue;
+      stepArena(room,dt,now);
+      if(room.winner && room.status==='live'){
+        room.status='won';room.progress.launches++;room.progress.cells=3;
+        io.to(room.code).emit('world:control',{action:'won',round:room.round});broadcast(room);
+      }
+      if(arenaTick%2===0)io.to(room.code).volatile.emit('arena:state',arenaSnapshot(room));
+      if(arenaTick%10===0)broadcast(room);
+    }
+  },50);
+  arenaInterval.unref();
   const interval = setInterval(() => {
     const now = Date.now();
     for (const [code, room] of rooms) {
       let changed = expireEffects(room, now);
       if (room.status === 'live' && now - room.startedAt - room.pauseDuration >= ROUND_MS + room.timeAdjustmentMs) { room.status = 'ended'; changed = true; }
-      for (const [id, p] of room.participants) if (p.sockets.size === 0 && now - p.lastSeen > 60000) room.participants.delete(id);
+      for (const [id, p] of room.participants) if (p.sockets.size === 0 && now - p.lastSeen > 60000) {room.participants.delete(id);room.players.delete(id);}
       if (now - room.lastActivity > 7200000) { io.to(code).emit('room:closed'); rooms.delete(code); }
       else if (changed) broadcast(room);
     }
@@ -177,7 +217,7 @@ export async function createApplication({ dev = false } = {}) {
     app.get('/{*path}', (_req, res) => res.sendFile(path.join(root, 'dist', 'index.html')));
   }
   app.use((error, _req, res, _next) => res.status(400).json({ error: error.type === 'entity.too.large' ? 'That request was too large.' : 'That request could not be read.' }));
-  return { http, io, close: async () => { clearInterval(interval); pendingBroadcasts.forEach(clearTimeout); await new Promise(resolve => io.close(resolve)); } };
+  return { http, io, close: async () => { clearInterval(interval); clearInterval(arenaInterval); pendingBroadcasts.forEach(clearTimeout); await new Promise(resolve => io.close(resolve)); } };
 }
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const { http } = await createApplication({ dev: process.argv.includes('--dev') });
