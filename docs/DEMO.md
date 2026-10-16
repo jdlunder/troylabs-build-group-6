@@ -2,11 +2,13 @@
 
 ## Before going on
 
-1. Open the public HTTPS URL on the presenting computer. Create a fresh universe. Keep that creator tab open.
+1. Open https://godmode-troylabs.vercel.app on the presenting computer. It starts/resumes and opens the public game runtime. Create a fresh universe. Keep that creator tab open.
 2. Scan the QR on an actual phone, enter a nickname, and send one rule. Confirm the name and effect on the projector.
 3. Reset the room. Return the phone to the controller; participants stay connected through reset.
 4. Check projector legibility and use fullscreen. Keep the QR sidebar visible during joining. Sound is optional and off initially.
 5. Choose a player: one teammate on WASD/Space, or Guided run if you are presenting alone. Keep the computer and tunnel awake if using temporary hosting.
+
+The deployed demo runtime has a 45-minute session cap. Open the stable entry before rehearsing; after a stopped session resumes, create a new universe because room state is in memory. For an uninterrupted session longer than that, use the included persistent Node/Docker deployment.
 
 ## 0:00–0:25 — Give away the power
 

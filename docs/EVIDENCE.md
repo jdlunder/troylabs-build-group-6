@@ -14,7 +14,12 @@ Recorded 2026-10-16. These are observed checks, not estimates of venue Wi-Fi per
 
 - An HTTPS tunnel served the real application and health endpoint. A real Chromium browser created a room and joined its presenter view through that public origin.
 - A one-client external WebSocket connection and room join succeeded.
-- The first free-tunnel 40-client burst test connected all participants but had command acknowledgement timeouts. It does **not** establish reliable public crowd performance. External transport is being verified separately from the local application.
+- The free tunnel had acknowledgement timeouts under a 40-client burst and was replaced for the deployed demo.
+- The San Francisco Vercel Sandbox runtime passed the complete **40-client public WebSocket test**. All 40 commands reached the stage. Measured acknowledgement round trips: **143.3 ms median, 222.7 ms p95, 423.6 ms maximum** in that run. This remains a synthetic client test from one computer, not a real audience/venue measurement.
+- An unauthenticated request to `https://godmode-troylabs.vercel.app/` followed the launch Function to the running public game and returned HTTP 200 with the correct application title. Chromium also followed this entry successfully.
+- The cloud runtime was deliberately stopped through its authenticated SDK; the stop reported that a filesystem snapshot was saved. A fresh unauthenticated visit to the stable entry resumed the runtime, restarted the Node server, and returned the game with HTTP 200. The previous room state was intentionally ephemeral.
+- At a 390×844 phone viewport, a nickname was entered and a real rule button was pressed. The phone received an acknowledgement, the stage displayed that participant's name and rule, and the lava state appeared on the shared stage. The mobile screenshot was visually inspected.
+- The same browser flow was repeated through the public cloud runtime: a separate phone-sized page joined the presenter's new room, sent lava, typed “moon gravity and rain 6 ducks,” and sent boulders. The stage displayed the real nickname, rule feed, active lava/moon effects, rendered ducks/boulders, and a count of one audience member. Both stage and phone screenshots were captured and the stage image inspected. Browser console reported no errors.
 
 ## Boundaries
 

@@ -4,6 +4,10 @@
 
 A complete live multiplayer experiment built for TroyLabs Builders Night: a procedural 3D world, real QR joining, a phone controller, natural-language rule composition, presenter controls, and a three-minute mission. Collect three energy cells and reach the rocket while the room makes questionable decisions.
 
+**Live entry:** https://godmode-troylabs.vercel.app
+
+The entry starts/resumes the public game runtime and redirects you to it. Create your universe there so the QR points to the actual live server.
+
 ## Run it
 
 Node.js 22.12+ or 24+.
@@ -65,6 +69,10 @@ The load check creates a separate temporary room and connects a presenter plus 4
 
 ## Deploy
 
+The deployed Vercel entry uses `api/launch.js` and `@vercel/sandbox` to start/resume a named persistent Sandbox in San Francisco. The Node server runs inside that runtime; the Vercel Function only boots it and redirects. It does not carry WebSockets through a serverless Function. The project-scoped Vercel OIDC credential remains on the server.
+
+Each demo runtime session is configured for **45 minutes**. When it stops, the filesystem is snapshotted and the next visit to the stable entry can resume a new session. Running processes and in-memory rooms do not survive that stop: create a fresh room after a resume. This is a demo hosting arrangement, not an always-on room store. For longer uninterrupted sessions, run the same app on the persistent Node service below.
+
 This app needs **one persistent Node process with WebSocket support**. Use the included Dockerfile, Render blueprint, or Railway configuration. Keep it to one process/replica; room state is currently held in memory. A process restart clears the rooms. A multi-instance service would need a shared room store and Socket.IO adapter.
 
 ```sh
@@ -85,5 +93,6 @@ Static/serverless-only hosting does not provide the persistent Socket.IO room se
 - `src/main.jsx`: landing, presenter stage, phone controller, and reconnect behavior.
 - `src/game/Universe.js`: Three.js scene, player, physics objects, effects, fuel, and rocket.
 - `src/style.css`: responsive UI and motion preferences.
+- `api/launch.js`: Vercel entry that starts/resumes the public game runtime.
 
 The main presenter browser simulates the physics and reports mission progress. Phones send rules and receive room state; they do not run the 3D engine. A second stage browser receives room rules but does not mirror the main player's exact pose. There are no external 3D assets, screen recordings, or fabricated audience members.

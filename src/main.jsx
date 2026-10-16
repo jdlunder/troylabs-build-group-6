@@ -198,7 +198,7 @@ function Stage({code}) {
   if(!room)return <Loading error={error} connection={connection}/>;
   const terminal=['won','finale','ended'].includes(room.status);
   return <div className={'stage '+(cinema?'cinema':'')}>
-    <header className="stage-header"><Brand onClick={()=>navigate('/')}/><div className="stage-universe"><span>UNIVERSE</span><strong>{code}</strong></div><div className="stage-header-right"><Connection status={connection}/><span className="audience-count"><Users size={16}/><strong>{room.audience}</strong> gods online</span><button className="icon-button" aria-label="Copy audience invite link" onClick={copy}>{copied?<Check size={18}/>:<Link2 size={18}/>}</button><button className="icon-button" aria-label="Toggle fullscreen" onClick={()=>document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen().catch(()=>setControlError('Use your browser’s fullscreen command.'))}><Maximize2 size={18}/></button></div></header>
+    <header className="stage-header"><Brand onClick={()=>navigate('/')}/><div className="stage-universe"><span>UNIVERSE</span><strong>{code}</strong></div><div className="stage-header-right"><Connection status={connection}/><span className="audience-count"><Users size={16}/><strong>{room.audience}</strong> {room.audience===1?'god':'gods'} online</span><button className="icon-button" aria-label="Copy audience invite link" onClick={copy}>{copied?<Check size={18}/>:<Link2 size={18}/>}</button><button className="icon-button" aria-label="Toggle fullscreen" onClick={()=>document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen().catch(()=>setControlError('Use your browser’s fullscreen command.'))}><Maximize2 size={18}/></button></div></header>
     <main className="stage-main">
       <section className="stage-play">
         <GameCanvas room={room} host={host} gameRef={gameRef} onProgress={progress} onReady={()=>setReady(true)}/>
@@ -235,7 +235,7 @@ function Phone({code}) {
   const terminal=['won','ended','finale'].includes(room.status),disabled=connection!=='connected'||room.status==='paused'||terminal;
   return <div className="phone">
     <header className="phone-header"><Brand onClick={()=>navigate('/')}/><span className="room-badge">{code}</span></header>
-    <div className="phone-live"><Connection status={connection}/><span><Users size={13}/>{room.audience} gods online</span><strong>{clock(room,now)}</strong></div>
+    <div className="phone-live"><Connection status={connection}/><span><Users size={13}/>{room.audience} {room.audience===1?'god':'gods'} online</span><strong>{clock(room,now)}</strong></div>
     <main className="phone-main">
       <div className="phone-title"><div><span className="eyebrow">HELLO, {name.toUpperCase()}</span><h1>You have godmode<span>.</span></h1></div><Mark small/></div>
       <p className="phone-subtitle">Change the world on the big screen.<br/>Be kind. Be chaotic. Be a little unreasonable.</p>
