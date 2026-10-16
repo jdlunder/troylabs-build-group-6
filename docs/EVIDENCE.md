@@ -36,6 +36,8 @@ Recorded 2026-10-16. These are observed checks, not estimates of venue Wi-Fi per
 - All 25 unit/integration checks passed, including two independent players, stale input, bounded input, pause, individual fuel/winner semantics, shared hazards/healing/reset, real socket role enforcement and reconnect recovery.
 - The dedicated multiplayer load test passed with 40 simultaneous simulated racers plus a Godmode controller: shared hazards, movement, live snapshots, denied cross-role actions, freeze on pause, and reset keeping all 40 players. The original 40-controller rule-delivery test also passed.
 - A local Chromium browser flow opened a projector and three phone-sized pages: two players and one Godmode user. Both phones rendered the same live 3D arena; held movement and jump controls were exercised; a four-power command appeared on phone and stage; pause disabled touch; switching roles and reset succeeded. No page errors were reported. Phone and stage screenshots were visually inspected.
+- The same flow passed on the public deployment, including two simultaneous emulated touch contacts holding direction and jump. The public 40-racer simulation also passed; input acknowledgement measured 33.5 ms median / 45.0 ms p95 in that run, which is not input-to-photon latency or a venue benchmark.
+- A separate public race completed using movement input messages only: all three cells were collected, the rocket was reached, and the server declared the correct named winner. The automated clear-arena route took 6.2 seconds; human play with audience chaos differs. Use Reset for successive short rounds without having phones rescan.
 
 ## Remaining evidence boundaries
 
