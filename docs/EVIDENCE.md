@@ -22,8 +22,6 @@ Recorded 2026-10-16. These are observed checks, not estimates of venue Wi-Fi per
 - The same browser flow was repeated through the public cloud runtime: a separate phone-sized page joined the presenter's new room, sent lava, typed “moon gravity and rain 6 ducks,” and sent boulders. The stage displayed the real nickname, rule feed, active lava/moon effects, rendered ducks/boulders, and a count of one audience member. Both stage and phone screenshots were captured and the stage image inspected. Browser console reported no errors.
 - The public stage's Guided run then collected all three cells and reached the rocket. The browser displayed the earned **“Against all odds.”** victory heading, and a victory screenshot was captured. The presenter-triggered Launch finale was not used for this check.
 
-## Boundaries
-
 ## Audience chaos upgrade
 
 - Added clock mercy/theft, clock locking, DUCKZILLA, reverse controls, earthquakes, and an expanded phone powers menu.
