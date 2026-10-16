@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { io } from 'socket.io-client';
 import { createApplication } from '../server/index.js';
+import { SPAWN } from '../shared/arena.js';
 
 let application,base=process.argv[2];const clients=[];
 if(!base){application=await createApplication();await new Promise(r=>application.http.listen(0,'127.0.0.1',r));base='http://127.0.0.1:'+application.http.address().port;}
@@ -16,7 +17,7 @@ try{
   const latency=await Promise.all(players.map(async({s},i)=>{const start=performance.now();const r=await ack(s,'player:input',{x:i%2?1:-1,z:0,jump:i%3===0});assert.equal(r.ok,true);return performance.now()-start;}));
   const effect=await ack(god.s,'world:command',{text:'moon gravity and rain 8 ducks and disco and lava',requestId:'race-chaos'});assert.equal(effect.ok,true,effect.error);
   await new Promise(r=>setTimeout(r,700));
-  assert.equal(latest.players.length,40);assert.equal(latest.hazards.length,8);assert.ok(frames>=3);assert.ok(latest.players.some(p=>p.x>-5.9));
+  assert.equal(latest.players.length,40);assert.equal(latest.hazards.length,8);assert.ok(frames>=3);assert.ok(Math.abs(latest.players.find(p=>p.id===players[0].result.participant.id).x-SPAWN[0])>.2);
   assert.equal((await ack(god.s,'player:input',{x:1,z:0})).ok,false);
   assert.equal((await ack(players[0].s,'world:command',{text:'lava',requestId:'not-a-god'})).ok,false);
   await ack(host.s,'host:action',{action:'pause'});await new Promise(r=>setTimeout(r,130));const paused=latest.players.map(p=>[p.x,p.y,p.z]);await new Promise(r=>setTimeout(r,200));assert.deepEqual(latest.players.map(p=>[p.x,p.y,p.z]),paused);

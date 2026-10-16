@@ -1,17 +1,16 @@
 import { randomUUID } from 'node:crypto';
+import { CELLS as cells, STONES as stones, SPAWN, ROCKET, HALF_X, HALF_Z } from '../shared/arena.js';
 
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
-const cells=[[-5,-3],[0,3],[4,-3]];
-const stones=[[-6.6,3.5,2.4,2.2],[-5,-3,2.5,2.5],[-2,-1,2.3,2.3],[0,3,2.5,2.5],[2,0,2.2,2.2],[4,-3,2.5,2.5],[7,0,3,3]];
 function active(room,id,now){return Boolean(room.effects[id]&&room.effects[id].expiresAt>now);}
 function ground(room,x,z,now){
   let floor=0;
   for(const [px,pz,w,d] of stones)if(Math.abs(x-px)<w/2+.12&&Math.abs(z-pz)<d/2+.12)floor=.73;
-  if(active(room,'bridge',now)&&Math.abs(z)<.65&&Math.abs(x)<8)floor=Math.max(floor,.65);
+  if(active(room,'bridge',now)&&Math.abs(z)<.65&&Math.abs(x)<HALF_X-.5)floor=Math.max(floor,.65);
   return floor;
 }
 export function createPlayer(participant,seat=0){
-  return {id:participant.id,name:participant.name,color:participant.color,seat,x:-6.6+(seat%4)*.32,y:.75,z:3.5+Math.floor(seat/4)%4*.25,vx:0,vy:0,vz:0,angle:0,health:100,collected:new Set(),input:{x:0,z:0,jump:false},inputAt:0,jumpQueued:false,lastDamage:0,connected:true};
+  return {id:participant.id,name:participant.name,color:participant.color,seat,x:SPAWN[0]+(seat%8)*.6,y:.75,z:SPAWN[1]+Math.floor(seat/8)*.48,vx:0,vy:0,vz:0,angle:0,health:100,wins:participant.wins||0,falls:0,collected:new Set(),input:{x:0,z:0,jump:false},inputAt:0,jumpQueued:false,lastDamage:0,connected:true};
 }
 export function setPlayerInput(player,input,now=Date.now()){
   if(!Number.isFinite(input.x)||!Number.isFinite(input.z))return false;
@@ -21,12 +20,12 @@ export function setPlayerInput(player,input,now=Date.now()){
 function damage(room,p,amount,now){
   if(!amount||active(room,'shield',now)||now-p.lastDamage<1200)return;
   p.lastDamage=now;p.health=Math.max(0,p.health-amount);
-  if(p.health===0){p.health=100;p.x=-6.6;p.y=1;p.z=3.5;p.vx=p.vy=p.vz=0;}
+  if(p.health===0){p.health=100;p.x=SPAWN[0];p.y=1;p.z=SPAWN[1];p.vx=p.vy=p.vz=0;}
 }
 function spawn(room,type,count,now){
   for(let i=0;i<count;i++){
     if(room.hazards.length>=30)room.hazards.shift();
-    room.hazards.push({id:randomUUID(),type,x:-6+Math.random()*12,y:6+Math.random()*4,z:-4+Math.random()*8,vx:(Math.random()-.5)*3,vy:0,vz:(Math.random()-.5)*3,radius:type==='duckzilla'?2.4:type==='ducks'?.48:.65,born:now});
+    room.hazards.push({id:randomUUID(),type,x:(Math.random()-.5)*(HALF_X*1.6),y:6+Math.random()*4,z:(Math.random()-.5)*(HALF_Z*1.6),vx:(Math.random()-.5)*3,vy:0,vz:(Math.random()-.5)*3,radius:type==='duckzilla'?2.4:type==='ducks'?.48:.65,born:now});
   }
 }
 export function applyArenaCommand(room,plan,now=Date.now()){
@@ -59,12 +58,12 @@ export function stepArena(room,realDt,now=Date.now()){
     p.jumpQueued=false;p.vy-=gravity*dt;const previousY=p.y;
     p.x+=p.vx*dt;p.y+=p.vy*dt;p.z+=p.vz*dt;
     const nextFloor=ground(room,p.x,p.z,now);
-    if(Math.abs(p.x)<9&&Math.abs(p.z)<6&&p.y<nextFloor&&previousY>=nextFloor-.22){p.y=nextFloor;p.vy=0;}
-    if(Math.abs(p.x)>9.5||Math.abs(p.z)>6.5||p.y< -4){damage(room,p,25,now);p.x=-6.6;p.y=1;p.z=3.5;p.vx=p.vy=p.vz=0;}
+    if(Math.abs(p.x)<HALF_X&&Math.abs(p.z)<HALF_Z&&p.y<nextFloor&&previousY>=nextFloor-.22){p.y=nextFloor;p.vy=0;}
+    if(Math.abs(p.x)>HALF_X+.5||Math.abs(p.z)>HALF_Z+.5||p.y< -4){p.falls++;damage(room,p,25,now);p.x=SPAWN[0];p.y=1;p.z=SPAWN[1];p.vx=p.vy=p.vz=0;}
     if(active(room,'lava',now)&&p.y<.28)damage(room,p,12,now);
     if(length>.1)p.angle=Math.atan2(dx,dz);
     cells.forEach(([x,z],i)=>{if(Math.hypot(p.x-x,p.z-z)<1.1&&Math.abs(p.y-.8)<2)p.collected.add(i);});
-    if(p.collected.size===3&&Math.hypot(p.x-7,p.z)<1.4){room.winner={id:p.id,name:p.name,color:p.color};break;}
+    if(p.collected.size===3&&Math.hypot(p.x-ROCKET[0],p.z-ROCKET[1])<1.4){p.wins++;room.winner={id:p.id,name:p.name,color:p.color,wins:p.wins,title:'Rocket royalty'};break;}
   }
   if(active(room,'meteors',now)&&now-room.lastMeteor>700){spawn(room,'meteors',1,now);room.lastMeteor=now;}
   const remaining=[];
@@ -74,7 +73,7 @@ export function stepArena(room,realDt,now=Date.now()){
     if(active(room,'blackhole',now)){const dx=.5-h.x,dz=-1-h.z,d=Math.max(.1,Math.hypot(dx,dz));h.vx+=dx/d*9*dt;h.vz+=dz/d*9*dt;}
     h.x+=h.vx*dt;h.y+=h.vy*dt;h.z+=h.vz*dt;
     const floor=ground(room,h.x,h.z,now)+h.radius;
-    if(Math.abs(h.x)<9&&Math.abs(h.z)<6&&h.y<floor&&h.vy<0){
+    if(Math.abs(h.x)<HALF_X&&Math.abs(h.z)<HALF_Z&&h.y<floor&&h.vy<0){
       if(h.type==='meteors'){for(const p of room.players.values())if(Math.hypot(p.x-h.x,p.z-h.z)<2)damage(room,p,15,now);continue;}
       h.y=floor;h.vy=Math.max(Math.abs(h.vy)*(h.type==='boulders'?.86:.68),active(room,'trampoline',now)?8:1.4);
     }
@@ -88,5 +87,5 @@ export function stepArena(room,realDt,now=Date.now()){
 }
 export function arenaSnapshot(room){
   const round=n=>Math.round(n*1000)/1000;
-  return {round:room.round,at:Date.now(),players:[...room.players.values()].filter(p=>p.connected!==false).map(p=>({id:p.id,name:p.name,color:p.color,x:round(p.x),y:round(p.y),z:round(p.z),angle:p.angle,health:p.health,cells:[...p.collected]})),hazards:room.hazards.map(h=>({id:h.id,type:h.type,x:round(h.x),y:round(h.y),z:round(h.z)})),winner:room.winner||null};
+  return {round:room.round,at:Date.now(),players:[...room.players.values()].filter(p=>p.connected!==false).map(p=>({id:p.id,name:p.name,color:p.color,x:round(p.x),y:round(p.y),z:round(p.z),angle:p.angle,health:p.health,wins:p.wins,falls:p.falls,cells:[...p.collected]})),hazards:room.hazards.map(h=>({id:h.id,type:h.type,x:round(h.x),y:round(h.y),z:round(h.z)})),winner:room.winner||null};
 }

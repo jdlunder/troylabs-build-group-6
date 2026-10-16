@@ -41,6 +41,8 @@ Recorded 2026-10-16. These are observed checks, not estimates of venue Wi-Fi per
 
 ## Remaining evidence boundaries
 
+- The crowd upgrade adds shared geometry coordinates for a 50%-wider/deeper arena, 48 distinct starts, persistent round-win trophies, a per-round fall award, and six validated four-power roulette combinations. Focused tests verify spawn bounds/uniqueness, fall counting, trophy persistence and roulette plans. Local browser QA exercised the larger phone/projector arena and the Gravity's favourite result panel.
+
 - No real 40-person audience or venue Wi-Fi test has been performed.
 - Optional model-provider interpretation has not been exercised with live credentials.
 - Commands become validated effect data. This build does not execute generated JavaScript or invent new mechanics on demand.

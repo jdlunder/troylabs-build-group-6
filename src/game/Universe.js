@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { CELLS, STONES, SPAWN, ROCKET, HALF_X, HALF_Z, TILE } from '../../shared/arena.js';
 
 const PALETTE = { navy: 0x253750, stone: 0x879cae, light: 0xd7e2e5, yellow: 0xf6df77, coral: 0xf67f73 };
 const clamp = THREE.MathUtils.clamp;
@@ -12,7 +13,7 @@ export class Universe {
     this.container = container; this.onProgress = onProgress; this.preview = preview;
     this.keys = new Set(); this.objects = []; this.particles = []; this.tiles = [];
     this.effects = {}; this.room = { status: 'lobby' }; this.auto = preview; this.host = preview;
-    this.health = 100; this.collected = new Set(); this.playerVelocity = v(); this.playerPosition = v(-6.6, .7, 3.5);
+    this.health = 100; this.collected = new Set(); this.playerVelocity = v(); this.playerPosition = v(SPAWN[0], .7, SPAWN[1]);
     this.elapsed = 0; this.lastDamage = -10; this.lastProgress = 0; this.lastMeteor = 0; this.jump = false; this.launchedAt = null; this.autoWaitUntil = 0;
     this.scene = new THREE.Scene();
     this.scene.fog = new THREE.Fog(0xbfc6e8, 45, 100);
@@ -58,20 +59,18 @@ export class Universe {
   box(x,y,z,color,px,py,pz,parent) { return this.mesh(new THREE.BoxGeometry(x,y,z), material(color),px,py,pz,parent); }
   buildWorld() {
     this.island = new THREE.Group(); this.scene.add(this.island);
-    this.box(18.6,1.1,12.6,0x31475d,0,-.85,0,this.island);
-    this.box(18.1,.25,12.1,0x657f92,0,-.2,0,this.island);
-    for (let x = -8; x <= 8; x += 2) for (let z = -5; z <= 5; z += 2) {
+    this.box(HALF_X*2+.6,1.1,HALF_Z*2+.6,0x31475d,0,-.85,0,this.island);
+    this.box(HALF_X*2+.1,.25,HALF_Z*2+.1,0x657f92,0,-.2,0,this.island);
+    for (let x = -HALF_X+TILE/2; x < HALF_X; x += TILE) for (let z = -HALF_Z+TILE/2; z < HALF_Z; z += TILE) {
       const base = new THREE.Color().setHSL(.57 + Math.random()*.025,.15,.59+Math.random()*.045);
-      const tile = this.mesh(new THREE.BoxGeometry(1.96,.22,1.96), material(base),x,-.05,z,this.island);
+      const tile = this.mesh(new THREE.BoxGeometry(TILE-.04,.22,TILE-.04), material(base),x,-.05,z,this.island);
       tile.userData.base = base; this.tiles.push(tile);
     }
     for (let i = 0; i < 12; i++) {
       const rock = this.mesh(new THREE.ConeGeometry(rand(1,2.3),rand(2,4),4),material(i%2 ? 0x34495e : 0x43576b),rand(-7,7),-2.1,rand(-4,4),this.island);
       rock.rotation.z = Math.PI; rock.rotation.y = rand(0,Math.PI);
     }
-    this.stones = [
-      [-6.6,3.5,2.4,2.2],[-5,-3,2.5,2.5],[-2,-1,2.3,2.3],[0,3,2.5,2.5],[2,0,2.2,2.2],[4,-3,2.5,2.5],[7,0,3,3]
-    ];
+    this.stones = STONES;
     this.stones.forEach(([x,z,w,d],i) => {
       const stone = this.box(w,.65,d, i===6 ? 0x526b83 : 0xd1dbe0,x,.32,z);
       this.box(w-.12,.07,d-.12, i===6 ? 0x687f94 : 0xe0e6e5,x,.68,z);
@@ -82,8 +81,8 @@ export class Universe {
       stone.receiveShadow = true;
     });
     this.bridge = new THREE.Group(); this.scene.add(this.bridge); this.bridge.visible = false;
-    for (let i=0;i<14;i++) this.box(1.1,.2,1.25,0xc8dbbd,-7.15+i*1.1,.53,0,this.bridge);
-    const cellPositions = [[-5,-3],[0,3],[4,-3]];
+    for (let i=0;i<24;i++) this.box(1.1,.2,1.25,0xc8dbbd,-12.65+i*1.1,.53,0,this.bridge);
+    const cellPositions = CELLS;
     this.cells = cellPositions.map(([x,z],i) => {
       const group = new THREE.Group(); group.position.set(x,1.25,z);
       this.mesh(new THREE.OctahedronGeometry(.38),material(PALETTE.yellow,{emissive:0xf4ba36,emissiveIntensity:.45}),0,.1,0,group);
@@ -139,7 +138,7 @@ export class Universe {
     shadow.rotation.x = -Math.PI/2; this.scene.add(shadow); this.heroShadow = shadow;
   }
   buildRocket() {
-    this.rocket = new THREE.Group(); this.rocket.position.set(7,.73,0); this.scene.add(this.rocket);
+    this.rocket = new THREE.Group(); this.rocket.position.set(ROCKET[0],.73,ROCKET[1]); this.scene.add(this.rocket);
     const white = material(0xf7f1dc), red = material(0xf2786b);
     this.mesh(new THREE.CylinderGeometry(.5,.57,2.35,16),white,0,1.6,0,this.rocket);
     this.mesh(new THREE.ConeGeometry(.5,1.08,16),red,0,3.3,0,this.rocket);
@@ -179,10 +178,10 @@ export class Universe {
     const {width,height} = this.container.getBoundingClientRect();
     if(!width || !height) return;
     this.renderer.setSize(width,height);
-    const aspect=width/height, span=this.preview?22:21;
+    const aspect=width/height, span=this.preview?32:30;
     this.camera.left = -span*aspect/2; this.camera.right = span*aspect/2;
     this.camera.top=span/2; this.camera.bottom=-span/2;
-    if(aspect<1.15) { this.camera.left=-14; this.camera.right=14; this.camera.top=14/aspect; this.camera.bottom=-14/aspect; }
+    if(aspect<1.15) { this.camera.left=-20; this.camera.right=20; this.camera.top=20/aspect; this.camera.bottom=-20/aspect; }
     if(this.mobile){this.camera.left=-8;this.camera.right=8;this.camera.top=8/aspect;this.camera.bottom=-8/aspect;}
     this.camera.updateProjectionMatrix();
   }
@@ -282,8 +281,8 @@ export class Universe {
   reset() {
     this.effects={}; [...this.objects].forEach(o=>this.removeObject(o));
     this.collected.clear(); this.cells.forEach(c=>c.group.visible=true);
-    this.health=100; this.playerPosition.set(-6.6,.7,3.5); this.playerVelocity.set(0,0,0); this.autoWaitUntil=0;
-    this.hero.visible=true; this.launchedAt=null; this.rocket.position.set(7,.73,0);
+    this.health=100; this.playerPosition.set(SPAWN[0],.7,SPAWN[1]); this.playerVelocity.set(0,0,0); this.autoWaitUntil=0;
+    this.hero.visible=true; this.launchedAt=null; this.rocket.position.set(ROCKET[0],.73,ROCKET[1]);
     this.flame.visible=false; this.flameInner.visible=false; this.particles=[]; this.lastDamage=-10;
     this.keys.clear(); this.emitProgress();
   }
@@ -334,14 +333,14 @@ export class Universe {
   ground(x,z) {
     let ground=0;
     for(const [px,pz,w,d] of this.stones) if(Math.abs(x-px)<w/2+.12 && Math.abs(z-pz)<d/2+.12) ground=.73;
-    if(this.active('bridge') && Math.abs(z)<.65 && Math.abs(x)<8) ground=Math.max(ground,.65);
+    if(this.active('bridge') && Math.abs(z)<.65 && Math.abs(x)<HALF_X-.5) ground=Math.max(ground,.65);
     return ground;
   }
   damage(amount) {
     if(amount <= 0 || this.active('shield') || this.elapsed-this.lastDamage<1.2 || this.preview) return;
     this.lastDamage=this.elapsed; this.health=Math.max(0,this.health-amount);
     this.burst(this.playerPosition.clone().add(v(0,.5,0)),15);
-    if(this.health===0) { this.playerPosition.set(-6.6,1,3.5); this.playerVelocity.set(0,0,0); this.health=100; }
+    if(this.health===0) { this.playerPosition.set(SPAWN[0],1,SPAWN[1]); this.playerVelocity.set(0,0,0); this.health=100; }
     this.emitProgress();
   }
   emitProgress(won=false) { if(this.host && !this.preview && !this.multiplayer) this.onProgress({cells:this.collected.size,health:this.health,won}); }
@@ -352,7 +351,7 @@ export class Universe {
     if(playing && this.host) {
       if(this.auto) {
         const target=this.cells.find(c=>!this.collected.has(c.i));
-        const tx=target?.x??7,tz=target?.z??0;
+        const tx=target?.x??ROCKET[0],tz=target?.z??ROCKET[1];
         dx=tx-this.playerPosition.x; dz=tz-this.playerPosition.z;
         const length=Math.hypot(dx,dz); if(length>.18){dx/=length;dz/=length;}else{dx=0;dz=0;}
         if(this.elapsed < this.autoWaitUntil){dx=0;dz=0;}
@@ -384,12 +383,12 @@ export class Universe {
     const previousY=this.playerPosition.y;
     this.playerPosition.addScaledVector(this.playerVelocity,dt);
     const newFloor=this.ground(this.playerPosition.x,this.playerPosition.z);
-    if(Math.abs(this.playerPosition.x)<9 && Math.abs(this.playerPosition.z)<6 && this.playerPosition.y<newFloor && previousY>=newFloor-.22) {
+    if(Math.abs(this.playerPosition.x)<HALF_X && Math.abs(this.playerPosition.z)<HALF_Z && this.playerPosition.y<newFloor && previousY>=newFloor-.22) {
       this.playerPosition.y=newFloor; this.playerVelocity.y=0;
       if(this.active('trampoline') && playing) this.playerVelocity.y=11;
     }
-    if(Math.abs(this.playerPosition.x)>9.5 || Math.abs(this.playerPosition.z)>6.5 || this.playerPosition.y< -4) {
-      this.damage(25); this.playerPosition.set(-6.6,1,3.5); this.playerVelocity.set(0,0,0);
+    if(Math.abs(this.playerPosition.x)>HALF_X+.5 || Math.abs(this.playerPosition.z)>HALF_Z+.5 || this.playerPosition.y< -4) {
+      this.damage(25); this.playerPosition.set(SPAWN[0],1,SPAWN[1]); this.playerVelocity.set(0,0,0);
     }
     if(playing && this.active('lava') && this.playerPosition.y<.28) this.damage(12);
     if(playing) for(const cell of this.cells) {
@@ -399,8 +398,8 @@ export class Universe {
         this.burst(cell.group.position,35,true); this.sound(); this.emitProgress();
       }
     }
-    if(playing && this.collected.size===3 && Math.hypot(this.playerPosition.x-7,this.playerPosition.z)<1.4) {
-      if(this.preview) { this.collected.clear(); this.cells.forEach(c=>c.group.visible=true); this.playerPosition.set(-6.6,.8,3.5); }
+    if(playing && this.collected.size===3 && Math.hypot(this.playerPosition.x-ROCKET[0],this.playerPosition.z-ROCKET[1])<1.4) {
+      if(this.preview) { this.collected.clear(); this.cells.forEach(c=>c.group.visible=true); this.playerPosition.set(SPAWN[0],.8,SPAWN[1]); }
       else { this.emitProgress(true); this.launch(); }
     }
     const size=this.active('giant')?1.7:this.active('tiny')?.55:1;
@@ -429,7 +428,7 @@ export class Universe {
       o.mesh.rotation.x+=o.spin.x*dt; o.mesh.rotation.z+=o.spin.z*dt;
       if(o.type==='ducks'||o.type==='duckzilla') o.mesh.rotation.x=0;
       const p=o.mesh.position, floor=this.ground(p.x,p.z)+o.radius;
-      if(Math.abs(p.x)<9 && Math.abs(p.z)<6 && p.y<floor && o.velocity.y<0) {
+      if(Math.abs(p.x)<HALF_X && Math.abs(p.z)<HALF_Z && p.y<floor && o.velocity.y<0) {
         if(o.type==='meteors') { this.burst(p,22); this.damage(Math.hypot(p.x-this.playerPosition.x,p.z-this.playerPosition.z)<2?15:0); this.removeObject(o); continue; }
         p.y=floor; o.velocity.y=Math.max(Math.abs(o.velocity.y)*(o.type==='boulders'?.86:.68),this.active('trampoline')?8:1.4);
       }
@@ -450,7 +449,7 @@ export class Universe {
   launch() {
     if(this.launchedAt!==null) return;
     this.launchedAt=this.elapsed; this.flame.visible=true; this.flameInner.visible=true;
-    this.hero.visible=false; this.burst(v(7,2,0),100,true); this.sound();
+    this.hero.visible=false; this.burst(v(ROCKET[0],2,ROCKET[1]),100,true); this.sound();
   }
   updateVisuals(dt) {
     const shake=this.active('earthquake')?.24:0;
@@ -473,7 +472,7 @@ export class Universe {
       const t=this.elapsed-this.launchedAt;
       this.rocket.position.y=.73+t*t*1.1; this.rocket.rotation.z=Math.sin(t*16)*.008;
       this.flame.scale.y=.8+Math.random()*.55; this.flameInner.scale.y=.9+Math.random()*.3;
-      if(t<3 && Math.random()<.4) this.burst(v(7,.5,0),3);
+      if(t<3 && Math.random()<.4) this.burst(v(ROCKET[0],.5,ROCKET[1]),3);
     }
     const alive=[];
     for(const p of this.particles) {

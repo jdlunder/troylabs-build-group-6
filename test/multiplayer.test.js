@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { createPlayer, setPlayerInput, stepArena, arenaSnapshot, resetArena, applyArenaCommand } from '../server/multiplayer.js';
 import { createApplication } from '../server/index.js';
 import { io } from 'socket.io-client';
+import { CELLS, ROCKET, SPAWN, HALF_X, HALF_Z } from '../shared/arena.js';
 
 function arena(){return {status:'live',players:new Map(),hazards:[],effects:{},lastMeteor:0};}
 function player(room,id){const p=createPlayer({id,name:id,color:'#f9dc7b'},room.players.size);room.players.set(id,p);return p;}
@@ -10,7 +11,7 @@ test('two phone players move independently and stale input stops movement',()=>{
   const room=arena(),a=player(room,'alice'),b=player(room,'bob'),bx=b.x;
   setPlayerInput(a,{x:1,z:0},1000);
   for(let i=0;i<10;i++)stepArena(room,.05,1000+i*50);
-  assert.ok(a.x>-6);assert.equal(b.x,bx);
+  assert.ok(a.x>SPAWN[0]+.6);assert.equal(b.x,bx);
   stepArena(room,.05,2000);const vx=a.vx;
   for(let i=0;i<20;i++)stepArena(room,.05,2050+i*50);
   assert.ok(Math.abs(a.vx)<Math.abs(vx));
@@ -25,9 +26,10 @@ test('phone input is bounded and a paused arena freezes all players',()=>{
 });
 test('each player collects their own cells and only reaching the rocket wins',()=>{
   const room=arena(),a=player(room,'alice'),b=player(room,'bob');
-  for(const [x,z] of [[-5,-3],[0,3],[4,-3]]){a.x=x;a.z=z;a.y=.8;stepArena(room,.01,1000);}
+  for(const [x,z] of CELLS){a.x=x;a.z=z;a.y=.8;stepArena(room,.01,1000);}
   assert.equal(a.collected.size,3);assert.equal(b.collected.size,0);assert.equal(room.winner,undefined);
-  a.x=7;a.z=0;stepArena(room,.01,1100);assert.equal(room.winner.name,'alice');
+  a.x=ROCKET[0];a.z=ROCKET[1];stepArena(room,.01,1100);assert.equal(room.winner.name,'alice');
+  assert.equal(a.wins,1);resetArena(room);assert.equal(a.wins,1);assert.equal(a.falls,0);
 });
 test('shared hazards, healing and reset affect the multiplayer arena',()=>{
   const room=arena(),p=player(room,'alice');p.health=30;
@@ -56,7 +58,13 @@ test('real sockets assign player roles, relay the arena, reject god movement and
     await new Promise(resolve=>setTimeout(resolve,250));
     const state=await(await fetch(base+'/api/rooms/'+room.code)).json();assert.equal(state.players.length,2);assert.equal(state.gods,1);
     a.s.disconnect();const again=await join(room.code,'player','alice');assert.equal(again.result.arena.players.filter(p=>p.name==='alice').length,1);
-    assert.ok(again.result.arena.players.find(p=>p.name==='alice').x>-6.6);
+    assert.ok(again.result.arena.players.find(p=>p.name==='alice').x>SPAWN[0]);
     await ack(host.s,'host:action',{action:'reset'});assert.equal((await(await fetch(base+'/api/rooms/'+room.code)).json()).players.length,2);
   }finally{clients.forEach(s=>s.disconnect());await app.close();}
+});
+test('the larger arena fits 48 distinct starting positions and counts a fall once',()=>{
+  const room=arena(),positions=new Set();
+  for(let i=0;i<48;i++){const p=createPlayer({id:String(i),name:'Racer',color:'#fff'},i);assert.ok(Math.abs(p.x)<HALF_X&&Math.abs(p.z)<HALF_Z);positions.add(p.x+':'+p.z);}
+  assert.equal(positions.size,48);
+  const p=player(room,'alice');p.x=HALF_X+2;stepArena(room,.05,1000);assert.equal(p.falls,1);stepArena(room,.05,1100);assert.equal(p.falls,1);
 });

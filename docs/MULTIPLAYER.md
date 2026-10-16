@@ -4,6 +4,8 @@ Open **https://godmode-troylabs.vercel.app/** on the projector. Create one unive
 
 Each person chooses a role:
 
+The arena is now 50% wider and deeper, with more space between fuel cells and 48 distinct spawn positions. In Godmode, **Chaos Roulette** picks a four-power combination such as Duck-based space program, HR is investigating, or Mandatory team bonding. Race winners earn trophy counts that survive Reset while they stay in Play. The result screen shows Rocket Royalty and Gravity's favourite (most falls this round).
+
 - **Play:** enter a name and tap Join the race. The phone shows the live 3D arena with a camera following that person's astronaut, a YOU marker, health, fuel, race standings, and a compass to the next fuel cell or rocket. Hold the arrows to move; hold Jump to bounce. Direction and jump work together with two fingers. No keyboard is required.
 - **Godmode:** use the existing rule buttons, compound text commands, and timer powers. Every phone player races in the same changing arena. Use the header button to switch sides between Play and Godmode; switching back to Play starts a fresh astronaut.
 

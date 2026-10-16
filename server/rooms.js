@@ -11,8 +11,10 @@ export function createRoom(now = Date.now()) {
   return room;
 }
 export function publicRoom(room, now = Date.now()) {
-  const players = [...room.players.values()].filter(p => p.connected !== false).map(p => ({ id: p.id, name: p.name, color: p.color, cells: p.collected.size, health: p.health }));
-  return { players, winner: room.winner || null, gods: [...room.participants.values()].filter(p => p.sockets.size > 0 && !p.host && p.role !== 'player').length, code: room.code, status: room.status, startedAt: room.startedAt, pausedAt: room.pausedAt, pauseDuration: room.pauseDuration, serverNow: now, roundMs: ROUND_MS + room.timeAdjustmentMs, clockLocked: room.clockLocked, round: room.round, revision: room.revision, audience: [...room.participants.values()].filter(p => p.sockets.size > 0 && !p.host).length, effects: Object.values(room.effects), history: room.history.slice(-MAX_HISTORY).reverse(), totalCommands: room.totalCommands, progress: room.progress, aiEnabled: Boolean(process.env.LLM_API_KEY) };
+  const players = [...room.players.values()].filter(p => p.connected !== false).map(p => ({ id: p.id, name: p.name, color: p.color, cells: p.collected.size, health: p.health, wins: p.wins || 0, falls: p.falls || 0 }));
+  const podium = [...players].filter(p => p.wins > 0).sort((a, b) => b.wins - a.wins).slice(0, 3);
+  const gravityVictim = [...players].filter(p => p.falls > 0).sort((a, b) => b.falls - a.falls)[0] || null;
+  return { podium, gravityVictim, players, winner: room.winner || null, gods: [...room.participants.values()].filter(p => p.sockets.size > 0 && !p.host && p.role !== 'player').length, code: room.code, status: room.status, startedAt: room.startedAt, pausedAt: room.pausedAt, pauseDuration: room.pauseDuration, serverNow: now, roundMs: ROUND_MS + room.timeAdjustmentMs, clockLocked: room.clockLocked, round: room.round, revision: room.revision, audience: [...room.participants.values()].filter(p => p.sockets.size > 0 && !p.host).length, effects: Object.values(room.effects), history: room.history.slice(-MAX_HISTORY).reverse(), totalCommands: room.totalCommands, progress: room.progress, aiEnabled: Boolean(process.env.LLM_API_KEY) };
 }
 export function applyPlan(room, plan, author, text, now = Date.now()) {
   const effects = plan.effects.map(effect => ({ ...effect, duration: effect.duration || EFFECTS[effect.id].duration, count: effect.count || 4 }));

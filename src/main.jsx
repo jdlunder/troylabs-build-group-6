@@ -9,6 +9,8 @@ import '@fontsource/dm-mono/500.css';
 import { EFFECTS, QUICK_CHAOS, QUICK_HELP, QUICK_WILD, ROUND_MS } from '../shared/catalog.js';
 import './style.css';
 import './multiplayer.css';
+import { CELLS, ROCKET, SPAWN } from '../shared/arena.js';
+import { CHAOS_ROULETTE } from '../shared/chaos.js';
 
 const ICONS = { ArrowDownToLine, ArrowUpFromLine, Bird, CircleDot, Eclipse, Flame, Heart, Maximize, Minimize, Moon, MoveHorizontal, Orbit, PartyPopper, Shield, Snowflake, Sparkles, Timer, Wind, Zap };
 function EffectIcon({ id, size=18, ...props }) { const Icon = ICONS[EFFECTS[id]?.icon] || Sparkles; return <Icon size={size} aria-hidden="true" {...props}/>; }
@@ -227,7 +229,7 @@ function Stage({code}) {
         <div className="game-active"><ActiveEffects room={room} compact/></div>
         {banner&&!terminal&&<div className="world-banner" key={banner.id} style={{'--effect':EFFECTS[banner.effects[0].id].color}}><span><EffectIcon id={banner.effects[0].id} size={27}/></span><div><small>{banner.author.name} rewrote reality</small><strong>{banner.effects.map(e=>(e.remove?'Cleared: ':'')+EFFECTS[e.id].label).join(' + ')}</strong></div></div>}
         {room.status==='paused'&&<div className="pause-overlay"><Pause size={40}/><h2>Even gods need a breather.</h2>{host&&<button className="button yellow" onClick={()=>action('start')}>Resume universe <Play size={17}/></button>}</div>}
-        {terminal&&<div className="finale-overlay"><div className="finale-star"><Mark/></div><span className="eyebrow">{room.status==='won'?'MISSION ACCOMPLISHED':room.status==='finale'?'THE GRAND FINALE':'TIME’S UP, UNIVERSE'}</span><h2>{room.status==='won'?'Against all odds.':room.status==='finale'?'The room made this.':'Beautiful chaos.'}</h2><p>{room.totalCommands} rules. {room.gods??room.audience} gods. {room.players?.length?room.players.length+' brave astronauts.':'One very brave astronaut.'}</p>{host&&<button className="button yellow" onClick={()=>action('reset')}>One more universe <RotateCcw size={16}/></button>}</div>}
+        {terminal&&<div className="finale-overlay"><div className="finale-star"><Mark/></div><span className="eyebrow">{room.status==='won'?(room.winner?room.winner.name+' wins!':'Against all odds.'):room.status==='finale'?'The room made this.':'Beautiful chaos.'}</span><h2>{room.status==='won'?(room.winner?room.winner.name+' wins!':'Against all odds.'):room.status==='finale'?'The room made this.':'Beautiful chaos.'}</h2><p>{room.totalCommands} rules. {room.gods??room.audience} gods. {room.players?.length?room.players.length+' brave astronauts.':'One very brave astronaut.'}</p><CompetitionAwards room={room}/>{host&&<button className="button yellow" onClick={()=>action('reset')}>One more universe <RotateCcw size={16}/></button>}</div>}
         <div className="game-bottom"><div className="key-guide"><Keyboard size={15}/><span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> move</span><span><kbd>space</kbd> jump</span></div><span className="sector-label">NOVA / SECTOR 06</span></div>
         {room.status==='lobby'&&host&&<button className="begin-game button yellow" onClick={()=>action('start')}><Play size={18}/> Start the experiment <ArrowRight size={18}/></button>}
         {!host&&<div className="spectator-note">Spectator view · Presenter controls stay on the original browser.</div>}
@@ -246,7 +248,7 @@ function Stage({code}) {
 function Loading({error,connection}) { return <div className="loading-screen"><Mark/><h1>{error?'Universe not found.':'Opening the universe…'}</h1><p>{error||'Connecting to mission control.'}</p>{error?<button className="button yellow" onClick={()=>navigate('/')}>Back to home <ArrowRight size={18}/></button>:<Connection status={connection}/>}</div>; }
 function RaceStandings({players=[],compact=false,ownId}) {
   const ordered=[...players].sort((a,b)=>(Array.isArray(b.cells)?b.cells.length:b.cells)-(Array.isArray(a.cells)?a.cells.length:a.cells));
-  return <div className={'race-standings '+(compact?'compact':'')}><span className="race-label">LIVE RACE · {players.length} PLAYERS</span><div>{ordered.slice(0,compact?5:8).map(p=><span key={p.id} className={p.id===ownId?'is-you':''}><i style={{background:p.color}}/><strong>{p.name}{p.id===ownId?' (you)':''}</strong><small>{Array.isArray(p.cells)?p.cells.length:p.cells}/3 ◆</small></span>)}</div></div>;
+  return <div className={'race-standings '+(compact?'compact':'')}><span className="race-label">LIVE RACE · {players.length} PLAYERS</span><div>{ordered.slice(0,compact?5:8).map(p=><span key={p.id} className={p.id===ownId?'is-you':''}><i style={{background:p.color}}/><strong>{p.name}{p.id===ownId?' (you)':''}</strong><small>{Array.isArray(p.cells)?p.cells.length:p.cells}/3 ◆{p.wins>0?' · '+p.wins+' 🏆':''}</small></span>)}</div></div>;
 }
 function TouchControls({input,gameRef,disabled}) {
   const held=useRef(new Set()),[active,setActive]=useState([]);
@@ -263,8 +265,8 @@ function TouchControls({input,gameRef,disabled}) {
 function PlayerPhone({code,name,room,connection,participant,arena,input,gameRef,onSwitch}) {
   const now=useTick(),own=arena?.players.find(p=>p.id===participant?.id),terminal=['won','ended','finale'].includes(room.status);
   const disabled=connection!=='connected'||room.status!=='live';
-  const target=[[-5,-3],[0,3],[4,-3]].find((_,i)=>!own?.cells.includes(i))||[7,0];
-  const tx=target[0]-(own?.x??-6.6),tz=target[1]-(own?.z??3.5),angle=Math.atan2(tx*.57+tz*.82,tx*.82-tz*.57)*180/Math.PI;
+  const target=CELLS.find((_,i)=>!own?.cells.includes(i))||ROCKET;
+  const tx=target[0]-(own?.x??SPAWN[0]),tz=target[1]-(own?.z??SPAWN[1]),angle=Math.atan2(tx*.57+tz*.82,tx*.82-tz*.57)*180/Math.PI;
   return <div className="phone-player"><header className="phone-header"><Brand/><span className="room-badge">{code}</span><button className="switch-role" onClick={onSwitch}>Godmode <Sparkles size={14}/></button></header><div className="phone-live"><Connection status={connection}/><span><Users size={13}/>{arena?.players.length||0} racing</span><strong>{clock(room,now)}</strong></div><div className="player-hud"><div><i style={{background:participant?.color}}/><strong>{name}</strong><span>YOU</span></div><span><Heart size={14}/>{own?.health??100}%</span><span className="player-fuel">{own?.cells.length||0}/3 ◆</span></div><div className="play-viewport"><GameCanvas room={room} host={false} gameRef={gameRef} arena={arena} ownId={participant?.id} mobile/><div className="objective-compass"><span style={{transform:'rotate('+angle+'deg)'}}>➜</span><strong>{own?.cells.length===3?'ROCKET':'NEXT FUEL'} · {Math.round(Math.hypot(tx,tz))}m</strong></div>{room.status==='lobby'&&<div className="player-overlay"><Rocket size={30}/><strong>You’re on the launchpad.</strong><p>Find your name. The presenter starts the race.</p></div>}{room.status==='paused'&&<div className="player-overlay"><Pause size={30}/><strong>Universe paused.</strong><p>Your thumbs deserve a break.</p></div>}{terminal&&<div className="player-overlay finish"><PartyPopper size={34}/><strong>{room.winner?room.winner.name+' wins!':room.status==='finale'?'What a universe.':'Beautiful chaos.'}</strong><p>{room.winner?.id===participant?.id?'YOU SURVIVED THE ROOM.':'Stay here for the next round.'}</p></div>}</div><RaceStandings players={arena?.players||[]} compact ownId={participant?.id}/><TouchControls input={input} gameRef={gameRef} disabled={disabled}/></div>;
 }
 function Phone({code}) {
@@ -287,12 +289,19 @@ function Phone({code}) {
       {room.status==='paused'&&<div className="phone-status"><Pause size={18}/><p><strong>The universe is paused.</strong>Your powers return when the presenter resumes.</p></div>}
       {terminal&&<div className="phone-status celebration"><Rocket size={22}/><p><strong>{room.winner?room.winner.name+' made it home.':room.status==='won'?'Nova made it home.':room.status==='finale'?'You made that happen.':'What a universe.'}</strong>{room.totalCommands} rules rewritten. Stay here for the next round.</p></div>}
       <ClockPowers command={command} disabled={disabled||room.status!=='live'||room.clockLocked} locked={room.clockLocked}/>
+      <ChaosRoulette command={command} disabled={disabled}/>
       <Composer command={command} disabled={disabled}/>
       {room.effects.length>0&&<section className="phone-world-state"><div className="quick-heading"><span>HAPPENING RIGHT NOW</span><Radio size={14}/></div><ActiveEffects room={room}/></section>}
       {room.players?.length>0?<RaceStandings players={room.players}/>:<div className="nova-status"><span className="nova-avatar">✦</span><div><strong>Nova is {room.progress.health>50?'hanging in there.':'having a moment.'}</strong><span>Health {room.progress.health}% · Fuel {room.progress.cells}/3</span></div><Heart size={17}/></div>}
       {error&&<p className="error" role="alert">{error}</p>}
     </main><footer className="phone-footer">THE AUDIENCE IS THE GAME.<span>GODMODE / TROYLABS '26</span></footer>
   </div>;
+}
+function ChaosRoulette({command,disabled}){
+  const [busy,setBusy]=useState(false),[notice,setNotice]=useState('Six bad ideas. Four powers at once.'),timer=useRef(null);
+  useEffect(()=>()=>clearTimeout(timer.current),[]);
+  async function roll(){if(busy||disabled)return;setBusy(true);const choice=CHAOS_ROULETTE[Math.floor(Math.random()*CHAOS_ROULETTE.length)];const result=await command(choice.rule);setNotice(result.ok?choice.name:result.error);timer.current=setTimeout(()=>setBusy(false),1200);}
+  return <section className="chaos-roulette"><button onClick={roll} disabled={disabled||busy}><Sparkles size={22}/><span><strong>{busy?'REALITY IS BUFFERING…':'CHAOS ROULETTE'}</strong><small>Roll four questionable decisions</small></span><span className="roulette-die">⚄</span></button><p role="status">{notice}</p></section>;
 }
 function App() {
   const [path,setPath]=useState(window.location.pathname);
@@ -307,3 +316,6 @@ class ErrorBoundary extends React.Component {
   render(){return this.state.error?<div className="loading-screen"><Mark/><h1>Reality hit a little turbulence.</h1><p>Reload to reconnect to your universe.</p><button className="button yellow" onClick={()=>location.reload()}>Reconnect <RotateCcw size={18}/></button></div>:this.props.children;}
 }
 createRoot(document.getElementById('root')).render(<ErrorBoundary><App/></ErrorBoundary>);
+function CompetitionAwards({room}) {
+  return <div className="competition-awards">{room.podium?.length>0&&<div><span>🏆 ROCKET ROYALTY</span><strong>{room.podium[0].name}</strong><small>{room.podium[0].wins} round {room.podium[0].wins===1?'win':'wins'} · reset to challenge them</small></div>}{room.gravityVictim&&<div><span>🪂 GRAVITY’S FAVOURITE</span><strong>{room.gravityVictim.name}</strong><small>{room.gravityVictim.falls} spectacular {room.gravityVictim.falls===1?'wipeout':'wipeouts'}</small></div>}</div>;
+}

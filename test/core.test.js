@@ -3,9 +3,13 @@ import assert from 'node:assert/strict';
 import { compileLocal, planSchema } from '../server/compiler.js';
 import { createRoom, publicRoom, applyPlan, expireEffects, hostAction, rooms } from '../server/rooms.js';
 import { EFFECTS } from '../shared/catalog.js';
+import { CHAOS_ROULETTE } from '../shared/chaos.js';
 
 test('all instant controls have valid corresponding rule plans', () => {
   for (const id of Object.keys(EFFECTS)) assert.equal(planSchema.safeParse({effects:[{id}]}).success,true,id);
+});
+test('every roulette result produces four distinct valid active powers',()=>{
+  for(const entry of CHAOS_ROULETTE){const plan=compileLocal(entry.rule);assert.equal(plan.effects.length,4,entry.name);assert.equal(new Set(plan.effects.map(e=>e.id)).size,4);assert.ok(plan.effects.every(e=>!e.remove));assert.equal(planSchema.safeParse({effects:plan.effects}).success,true);}
 });
 test('compound language compiles in one pass', () => {
   const plan=compileLocal('moon gravity and rain 6 ducks');
