@@ -41,6 +41,9 @@ Recorded 2026-10-16. These are observed checks, not estimates of venue Wi-Fi per
 
 ## Remaining evidence boundaries
 
+- A dedicated public browser check rendered 21 simultaneous racers with a phone player view and stacked moon gravity, lava, disco, shield and earthquake effects. Both views continued rendering and the browser reported no page errors. This used 20 simulated racers and one browser-controlled racer, not 21 physical phones.
+- The final playground upgrade expands the map to 32.4 × 21.6 units, adds six per-player golden banana pickups and four automatic spring pads, a selectable banana compass and Chief Banana Officer results. All 30 automated checks passed, including pickup deduplication/reset, spring launches and compatible wind/black-hole stacking. A browser-driven two-finger movement collected a banana, updated its counter and award, and reset cleanly with no page errors.
+
 - The crowd upgrade adds shared geometry coordinates for a 50%-wider/deeper arena, 48 distinct starts, persistent round-win trophies, a per-round fall award, and six validated four-power roulette combinations. Focused tests verify spawn bounds/uniqueness, fall counting, trophy persistence and roulette plans. Local browser QA exercised the larger phone/projector arena and the Gravity's favourite result panel.
 
 - No real 40-person audience or venue Wi-Fi test has been performed.

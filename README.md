@@ -8,7 +8,7 @@ A complete live multiplayer experiment built for TroyLabs Builders Night: a proc
 
 **Live entry:** https://godmode-troylabs.vercel.app
 
-**Crowd upgrade:** the arena is 50% wider and deeper, with 48 distinct starting positions. Godmode includes **Chaos Roulette**, which rolls one of six absurd four-power combinations. Earn **Rocket Royalty** win trophies across resets; the results also name **Gravity's favourite** for the most spectacular falls.
+**Crowd upgrade:** the arena is 80% wider and deeper than the original (32.4 × 21.6 world units), with 48 distinct starting positions, six golden bananas to hunt, and four physical spring pads. Tap the phone's banana counter to track nearby bananas and compete for **Chief Banana Officer**. Godmode includes **Chaos Roulette**, which rolls one of six absurd four-power combinations. Earn **Rocket Royalty** win trophies across resets; the results also name **Gravity's favourite** for the most spectacular falls.
 
 The entry starts/resumes the public game runtime and redirects you to it. Create your universe there so the QR points to the actual live server.
 

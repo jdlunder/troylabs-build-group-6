@@ -3,10 +3,22 @@ import assert from 'node:assert/strict';
 import { createPlayer, setPlayerInput, stepArena, arenaSnapshot, resetArena, applyArenaCommand } from '../server/multiplayer.js';
 import { createApplication } from '../server/index.js';
 import { io } from 'socket.io-client';
-import { CELLS, ROCKET, SPAWN, HALF_X, HALF_Z } from '../shared/arena.js';
+import { CELLS, ROCKET, SPAWN, HALF_X, HALF_Z, BANANAS, SPRINGS } from '../shared/arena.js';
 
 function arena(){return {status:'live',players:new Map(),hazards:[],effects:{},lastMeteor:0};}
 function player(room,id){const p=createPlayer({id,name:id,color:'#f9dc7b'},room.players.size);room.players.set(id,p);return p;}
+test('banana hunts score once per pickup per player and reset for the next round',()=>{
+ const room=arena(),a=player(room,'alice'),b=player(room,'bob');
+ a.x=BANANAS[0][0];a.z=BANANAS[0][1];a.y=0;
+ stepArena(room,.01,1000);stepArena(room,.01,1010);
+ assert.equal(a.bananas.size,1);assert.equal(b.bananas.size,0);
+ resetArena(room);assert.equal(a.bananas.size,0);
+});
+test('spring pads launch a grounded player without requiring jump input',()=>{
+ const room=arena(),p=player(room,'alice');p.x=SPRINGS[0][0];p.z=SPRINGS[0][1];p.y=0;
+ stepArena(room,.016,1000);assert.ok(p.vy>12);assert.equal(p.boings,1);
+ stepArena(room,.016,1016);assert.equal(p.boings,1);
+});
 test('two phone players move independently and stale input stops movement',()=>{
   const room=arena(),a=player(room,'alice'),b=player(room,'bob'),bx=b.x;
   setPlayerInput(a,{x:1,z:0},1000);

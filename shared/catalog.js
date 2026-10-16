@@ -7,7 +7,7 @@ export const EFFECTS = {
   ducks: { label: 'Release the ducks', icon: 'Bird', color: '#f5df73', duration: 0, kind: 'spawn', side: 'chaos' },
   meteors: { label: 'Meteor shower', icon: 'Orbit', color: '#ffac7b', duration: 16000, kind: 'weather', side: 'chaos' },
   blackhole: { label: 'Black hole', icon: 'Eclipse', color: '#c2a2ff', duration: 14000, kind: 'force', side: 'chaos' },
-  wind: { label: 'Plot twist: wind', icon: 'Wind', color: '#b8e6e2', duration: 15000, kind: 'force', side: 'chaos' },
+  wind: { label: 'Plot twist: wind', icon: 'Wind', color: '#b8e6e2', duration: 15000, kind: 'wind', side: 'chaos' },
   disco: { label: 'Disco universe', icon: 'Sparkles', color: '#fba8db', duration: 22000, kind: 'vibe', side: 'chaos' },
   giant: { label: 'Supersize the hero', icon: 'Maximize', color: '#e7bcff', duration: 18000, kind: 'size', side: 'chaos' },
   tiny: { label: 'Tiny astronaut', icon: 'Minimize', color: '#bce5c9', duration: 18000, kind: 'size', side: 'chaos' },

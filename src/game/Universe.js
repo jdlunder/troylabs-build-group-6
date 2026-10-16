@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { CELLS, STONES, SPAWN, ROCKET, HALF_X, HALF_Z, TILE } from '../../shared/arena.js';
+import { CELLS, STONES, SPAWN, ROCKET, HALF_X, HALF_Z, TILE, BANANAS, SPRINGS } from '../../shared/arena.js';
 
 const PALETTE = { navy: 0x253750, stone: 0x879cae, light: 0xd7e2e5, yellow: 0xf6df77, coral: 0xf67f73 };
 const clamp = THREE.MathUtils.clamp;
@@ -37,7 +37,7 @@ export class Universe {
     Object.assign(this.sun.shadow.camera, { left: -16, right: 16, top: 16, bottom: -16, near: 1, far: 60 });
     this.sun.shadow.bias = -.0004; this.sun.shadow.normalBias = .03;
     this.scene.add(this.sun);
-    this.buildWorld(); this.buildAstronaut(); this.buildRocket(); this.buildEffects();
+    this.buildWorld(); this.buildFun(); this.buildAstronaut(); this.buildRocket(); this.buildEffects();
     this.onKeyDown = e => {
       if (!this.host || /INPUT|TEXTAREA|BUTTON/.test(e.target.tagName) || e.target.isContentEditable) return;
       if (['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)) e.preventDefault();
@@ -81,7 +81,8 @@ export class Universe {
       stone.receiveShadow = true;
     });
     this.bridge = new THREE.Group(); this.scene.add(this.bridge); this.bridge.visible = false;
-    for (let i=0;i<24;i++) this.box(1.1,.2,1.25,0xc8dbbd,-12.65+i*1.1,.53,0,this.bridge);
+    const bridgePieces=Math.floor((HALF_X*2-1)/1.1);
+    for (let i=0;i<bridgePieces;i++) this.box(1.1,.2,1.25,0xc8dbbd,-(bridgePieces-1)*.55+i*1.1,.53,0,this.bridge);
     const cellPositions = CELLS;
     this.cells = cellPositions.map(([x,z],i) => {
       const group = new THREE.Group(); group.position.set(x,1.25,z);
@@ -109,6 +110,24 @@ export class Universe {
       const asteroid = this.mesh(new THREE.DodecahedronGeometry(rand(.6,1.4),0),material(0x8595b1),x,-2,z);
       asteroid.rotation.set(rand(0,3),rand(0,3),rand(0,3));
     }
+  }
+  buildFun() {
+    this.bananas=BANANAS.map(([x,z],i)=>{
+      const group=new THREE.Group();group.position.set(x,1.2,z);this.scene.add(group);
+      this.mesh(new THREE.TorusGeometry(.38,.12,6,14,Math.PI*.95),material(0xffdf42,{emissive:0xe6aa13,emissiveIntensity:.35,metalness:.35}),0,0,0,group);
+      this.mesh(new THREE.SphereGeometry(.11,6,6),material(0x725133),.38,0,0,group);
+      this.mesh(new THREE.SphereGeometry(.09,6,6),material(0x725133),-.37,.06,0,group);
+      const glow=this.mesh(new THREE.TorusGeometry(.7,.025,5,24),material(0xffe89a,{emissive:0xffdf42,emissiveIntensity:.7}),0,-.6,0,group);glow.rotation.x=-Math.PI/2;
+      return {group,i};
+    });
+    this.springPads=SPRINGS.map(([x,z])=>{
+      const group=new THREE.Group();group.position.set(x,.08,z);this.scene.add(group);
+      this.mesh(new THREE.CylinderGeometry(.85,.95,.16,16),material(0x32456e),0,0,0,group);
+      this.mesh(new THREE.CylinderGeometry(.67,.67,.08,16),material(0x9dedc9,{emissive:0x5fd9ba,emissiveIntensity:.4}),0,.13,0,group);
+      const ring=this.mesh(new THREE.TorusGeometry(.85,.045,5,28),material(0xf6df77,{emissive:0xf6df77,emissiveIntensity:.7}),0,.2,0,group);ring.rotation.x=-Math.PI/2;
+      this.mesh(new THREE.ConeGeometry(.21,.42,4),material(0xf6df77),0,.47,0,group);
+      return {group,ring};
+    });
   }
   buildAstronaut() {
     this.hero = new THREE.Group(); this.scene.add(this.hero);
@@ -203,6 +222,8 @@ export class Universe {
     for(const p of this.networkPlayers){
       let avatar=this.avatars.get(p.id);
       if(!avatar){avatar=this.makeAvatar(p,p.id===ownId);this.avatars.set(p.id,avatar);avatar.group.position.set(p.x,p.y,p.z);}
+      if((p.boings||0)>(avatar.target.boings||0))this.burst(v(p.x,p.y+.4,p.z),18,true);
+      if((p.bananas?.length||0)>(avatar.target.bananas?.length||0))this.burst(v(p.x,p.y+1,p.z),25,true);
       avatar.target=p;
     }
     if(this.multiplayer){
@@ -216,6 +237,7 @@ export class Universe {
       }
       const own=this.networkPlayers.find(p=>p.id===ownId);
       this.cells.forEach(c=>c.group.visible=!own?.cells.includes(c.i));
+      this.bananas.forEach(c=>c.group.visible=!own?.bananas?.includes(c.i));
     }else if(this.launchedAt===null){this.hero.visible=true;this.heroShadow.visible=true;}
   }
   predictInput(input){this.touchInput=input;this.touchAt=performance.now();}
@@ -374,8 +396,9 @@ export class Universe {
     }
     const floor=this.ground(this.playerPosition.x,this.playerPosition.z);
     const grounded=this.playerPosition.y<=floor+.06 && this.playerVelocity.y<=0;
-    if(playing && grounded && (this.jump || this.auto && (this.active('lava') || this.active('trampoline') || this.elapsed%3<.08))) {
-      this.playerVelocity.y=this.active('trampoline')?11:this.active('moon')?5.4:6.8;
+    const onSpring=SPRINGS.some(([x,z])=>Math.hypot(this.playerPosition.x-x,this.playerPosition.z-z)<.95);
+    if(playing && grounded && (onSpring || this.jump || this.auto && (this.active('lava') || this.active('trampoline') || this.elapsed%3<.08))) {
+      this.playerVelocity.y=onSpring?(this.active('moon')?7.5:12.5):this.active('trampoline')?11:this.active('moon')?5.4:6.8;
       this.jump=false;
     } else if(grounded) { this.playerPosition.y=floor; this.playerVelocity.y=0; }
     const gravity=this.active('moon')?3.3:this.active('heavy')?25:14;
@@ -454,8 +477,8 @@ export class Universe {
   updateVisuals(dt) {
     const shake=this.active('earthquake')?.24:0;
     const focus=this.mobileFocus||v();
-    this.camera.position.set(21+focus.x+Math.sin(this.elapsed*57)*shake,24+Math.cos(this.elapsed*43)*shake*.6,29+focus.z+Math.sin(this.elapsed*39)*shake);
-    if(this.mobile)this.camera.lookAt(focus.x,1.3,focus.z);
+    this.camera.position.set(21+focus.x+Math.sin(this.elapsed*57)*shake,24+(this.mobile?focus.y*.6:0)+Math.cos(this.elapsed*43)*shake*.6,29+focus.z+Math.sin(this.elapsed*39)*shake);
+    if(this.mobile)this.camera.lookAt(focus.x,1.3+focus.y*.6,focus.z);
     const lava=this.active('lava'),ice=this.active('ice'),disco=this.active('disco');
     this.tiles.forEach((tile,i)=>{
       const color=disco?new THREE.Color().setHSL((this.elapsed*.08+i*.035)%1,.5,.63):new THREE.Color(lava?0xef7558:ice?0xafe7ed:tile.userData.base);
@@ -466,6 +489,8 @@ export class Universe {
     this.holeRings.forEach((r,i)=>r.rotation.z=this.elapsed*(i%2?-.8:.5));
     this.windLines.children.forEach(line=>{line.position.x+=line.userData.speed*dt;if(line.position.x>11)line.position.x=-11;});
     this.cells.forEach(cell=>{cell.group.rotation.y=this.elapsed*.8;cell.group.position.y=1.4+Math.sin(this.elapsed*2+cell.i)*.18;});
+    this.bananas.forEach(b=>{b.group.rotation.y=this.elapsed*1.1+b.i;b.group.position.y=1.2+Math.sin(this.elapsed*2+b.i)*.2;});
+    this.springPads.forEach((p,i)=>p.ring.scale.setScalar(1+Math.sin(this.elapsed*4+i)*.08));
     if(lava && Math.random()<dt*12) this.burst(v(rand(-8,8),.1,rand(-5,5)),2);
     if(!this.multiplayer && this.active('meteors') && this.elapsed-this.lastMeteor>.7 && this.room.status!=='paused') {this.spawn('meteors',1);this.lastMeteor=this.elapsed;}
     if(this.launchedAt!==null) {
