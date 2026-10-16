@@ -20,6 +20,7 @@ Recorded 2026-10-16. These are observed checks, not estimates of venue Wi-Fi per
 - The cloud runtime was deliberately stopped through its authenticated SDK; the stop reported that a filesystem snapshot was saved. A fresh unauthenticated visit to the stable entry resumed the runtime, restarted the Node server, and returned the game with HTTP 200. The previous room state was intentionally ephemeral.
 - At a 390×844 phone viewport, a nickname was entered and a real rule button was pressed. The phone received an acknowledgement, the stage displayed that participant's name and rule, and the lava state appeared on the shared stage. The mobile screenshot was visually inspected.
 - The same browser flow was repeated through the public cloud runtime: a separate phone-sized page joined the presenter's new room, sent lava, typed “moon gravity and rain 6 ducks,” and sent boulders. The stage displayed the real nickname, rule feed, active lava/moon effects, rendered ducks/boulders, and a count of one audience member. Both stage and phone screenshots were captured and the stage image inspected. Browser console reported no errors.
+- The public stage's Guided run then collected all three cells and reached the rocket. The browser displayed the earned **“Against all odds.”** victory heading, and a victory screenshot was captured. The presenter-triggered Launch finale was not used for this check.
 
 ## Boundaries
 
