@@ -6,10 +6,10 @@ import { ArrowUpRight, ArrowRight, ArrowLeft, ArrowDownToLine, ArrowUpFromLine, 
 import '@fontsource-variable/space-grotesk';
 import '@fontsource/dm-mono/400.css';
 import '@fontsource/dm-mono/500.css';
-import { EFFECTS, QUICK_CHAOS, QUICK_HELP, ROUND_MS } from '../shared/catalog.js';
+import { EFFECTS, QUICK_CHAOS, QUICK_HELP, QUICK_WILD, ROUND_MS } from '../shared/catalog.js';
 import './style.css';
 
-const ICONS = { ArrowDownToLine, ArrowUpFromLine, Bird, CircleDot, Eclipse, Flame, Heart, Maximize, Minimize, Moon, MoveHorizontal, Orbit, PartyPopper, Shield, Snowflake, Sparkles, Timer, Wind };
+const ICONS = { ArrowDownToLine, ArrowUpFromLine, Bird, CircleDot, Eclipse, Flame, Heart, Maximize, Minimize, Moon, MoveHorizontal, Orbit, PartyPopper, Shield, Snowflake, Sparkles, Timer, Wind, Zap };
 function EffectIcon({ id, size=18, ...props }) { const Icon = ICONS[EFFECTS[id]?.icon] || Sparkles; return <Icon size={size} aria-hidden="true" {...props}/>; }
 function Mark({ small=false }) { return <svg className={small?'mark small':'mark'} viewBox="0 0 48 48" fill="none" aria-hidden="true"><path d="m24 5 5 14 14 5-14 5-5 14-5-14L5 24l14-5z" fill="currentColor"/><ellipse cx="24" cy="24" rx="23" ry="9" stroke="currentColor" strokeWidth="1.7" transform="rotate(-35 24 24)"/></svg>; }
 function Brand({ dark=false, onClick }) { return <button className={'brand '+(dark?'dark':'')} onClick={onClick} aria-label="GODMODE home"><Mark/><span>godmode<span className="brand-period">.</span></span></button>; }
@@ -20,7 +20,7 @@ function useTick() { const [now,setNow]=useState(Date.now());useEffect(()=>{cons
 function clock(room, now) {
   if(!room?.startedAt) return '03:00';
   const end=room.status==='paused'?room.pausedAt:now;
-  const seconds=Math.max(0,Math.ceil((ROUND_MS-(end-room.startedAt-room.pauseDuration))/1000));
+  const seconds=Math.max(0,Math.ceil(((room.roundMs || ROUND_MS)-(end-room.startedAt-room.pauseDuration))/1000));
   return Math.floor(seconds/60).toString().padStart(2,'0')+':'+(seconds%60).toString().padStart(2,'0');
 }
 async function newRoom(setError, setLoading, practice=false) {
@@ -146,6 +146,17 @@ function RuleFeed({room}) {
     </div>)}
   </div>;
 }
+function ClockPowers({command,disabled,locked}) {
+  const [busy,setBusy]=useState(false),[notice,setNotice]=useState('');
+  async function change(id){
+    if(busy||disabled)return;
+    setBusy(true);
+    const result=await command(EFFECTS[id].label,id);
+    setBusy(false);
+    setNotice(result.ok?(result.event.timerDeltaMs>0?'Mercy granted. Nova owes you one.':'Time stolen. Absolutely villainous.'):result.error);
+  }
+  return <section className="clock-powers"><div className="quick-heading"><span>YOU ALSO OWN THE CLOCK</span><Timer size={14}/></div><div className="clock-buttons"><button disabled={disabled||busy} onClick={()=>change('timeplus')}><strong>+15s</strong><span>Show mercy</span></button><button disabled={disabled||busy} onClick={()=>change('timeminus')}><strong>−10s</strong><span>Choose violence</span></button></div><p role="status">{notice || (locked?'Mission control locked the clock.':disabled?'Clock powers unlock when the round starts.':'One person can save the mission. Another can steal its time.')}</p></section>;
+}
 function Composer({command,mini=false,disabled=false}) {
   const [text,setText]=useState(''),[pending,setPending]=useState(false),[notice,setNotice]=useState(null),[cooldown,setCooldown]=useState(false);
   const timer=useRef(null);
@@ -170,6 +181,7 @@ function Composer({command,mini=false,disabled=false}) {
     <div className={'command-notice '+(notice?.ok?'success':'')} role="status">{pending?<><span className="spinner"/> Bending reality…</>:notice?.ok?<><CheckCheck size={16}/><span><strong>{notice.text}</strong><small>{notice.latency} ms acknowledgement</small></span></>:notice?<><HelpCircle size={16}/>{notice.text}</>:mini?null:<><Zap size={14}/> Your rule goes straight to the big screen.</>}</div>
     {!mini&&<><div className="quick-heading"><span>INSTANT CHAOS</span><small>Pick your power</small></div><div className="quick-grid">{QUICK_CHAOS.map(id=><button key={id} disabled={disabled||pending||cooldown} style={{'--effect':EFFECTS[id].color}} onClick={()=>send(EFFECTS[id].label,id)}><EffectIcon id={id} size={22}/><span>{EFFECTS[id].label}</span><ArrowUpRight size={14}/></button>)}</div><div className="quick-heading help-heading"><span>FEELING GENEROUS?</span><Heart size={13}/></div><div className="quick-grid help-grid">{QUICK_HELP.map(id=><button key={id} disabled={disabled||pending||cooldown} style={{'--effect':EFFECTS[id].color}} onClick={()=>send(EFFECTS[id].label,id)}><EffectIcon id={id} size={20}/><span>{EFFECTS[id].label}</span><ArrowUpRight size={14}/></button>)}</div></>}
     {mini&&<div className="stage-quick">{['lava','moon','ducks','shield','confetti'].map(id=><button title={EFFECTS[id].label} aria-label={EFFECTS[id].label} key={id} disabled={disabled||pending||cooldown} onClick={()=>send(EFFECTS[id].label,id)}><EffectIcon id={id} size={17}/></button>)}</div>}
+    {!mini&&<details className="wild-powers"><summary>MORE UNREASONABLE POWERS <ChevronRight size={15}/></summary><div className="quick-grid">{QUICK_WILD.map(id=><button key={id} disabled={disabled||pending||cooldown} style={{'--effect':EFFECTS[id].color}} onClick={()=>send(EFFECTS[id].label,id)}><EffectIcon id={id}/><span>{EFFECTS[id].label}</span><ArrowUpRight size={14}/></button>)}</div></details>}
   </div>;
 }
 function Stage({code}) {
@@ -203,7 +215,7 @@ function Stage({code}) {
       <section className="stage-play">
         <GameCanvas room={room} host={host} gameRef={gameRef} onProgress={progress} onReady={()=>setReady(true)}/>
         <div className="game-heading"><span className="eyebrow">ONE HERO. EVERYONE ELSE IS GOD.</span><h1>Get Nova home<span>.</span></h1><p>Collect 3 energy cells. Reach the rocket. Survive the room.</p></div>
-        <div className="game-timer"><span>{room.status==='lobby'?'READY FOR CHAOS':room.status==='paused'?'UNIVERSE PAUSED':terminal?'MISSION COMPLETE':'TIME TO LAUNCH'}</span><strong>{clock(room,now)}</strong></div>
+        <div className="game-timer"><span>{room.status==='lobby'?'READY FOR CHAOS':room.status==='paused'?'UNIVERSE PAUSED':terminal?'MISSION COMPLETE':'TIME TO LAUNCH'}</span><strong key={room.roundMs}>{clock(room,now)}</strong></div>
         <div className="game-stats"><div className="health-stat"><Heart size={16}/><span>NOVA</span><div className="health-track"><i style={{width:room.progress.health+'%'}}/></div><strong>{room.progress.health}</strong></div><div className="fuel-stat"><Zap size={16}/><span>FUEL</span>{[0,1,2].map(i=><span className={'fuel-cell '+(i<room.progress.cells?'filled':'')} key={i}>◆</span>)}</div></div>
         <div className="game-active"><ActiveEffects room={room} compact/></div>
         {banner&&!terminal&&<div className="world-banner" key={banner.id} style={{'--effect':EFFECTS[banner.effects[0].id].color}}><span><EffectIcon id={banner.effects[0].id} size={27}/></span><div><small>{banner.author.name} rewrote reality</small><strong>{banner.effects.map(e=>(e.remove?'Cleared: ':'')+EFFECTS[e.id].label).join(' + ')}</strong></div></div>}
@@ -216,6 +228,7 @@ function Stage({code}) {
       <aside className="stage-sidebar">
         <div className="invite-panel"><div className="invite-heading"><span className="live-dot"/> THE AUDIENCE HAS GODMODE</div><div className="qr-row"><div className="qr-frame">{qr&&<img src={qr} alt={'Scan to join universe '+code}/>}</div><div className="invite-copy"><Smartphone size={19}/><h2>Rewrite<br/>this world.</h2><p>Scan. Say a rule.<br/>Watch it happen.</p></div></div><button className="room-invite" onClick={copy}><span>JOIN CODE</span><strong>{code}</strong><Copy size={15}/></button><a className="invite-url" href={invite} target="_blank" rel="noreferrer">{window.location.host}/join/{code}<ArrowUpRight size={12}/></a></div>
         <RuleFeed room={room}/>
+        {host&&<button className="clock-lock" onClick={()=>action('lockclock')}><Timer size={14}/>{room.clockLocked?'Unlock audience clock':'Lock audience clock'}</button>}
         {host&&<Composer command={command} mini disabled={connection!=='connected'||terminal||room.status==='paused'}/>}
       </aside>
     </main>
@@ -241,6 +254,7 @@ function Phone({code}) {
       <p className="phone-subtitle">Change the world on the big screen.<br/>Be kind. Be chaotic. Be a little unreasonable.</p>
       {room.status==='paused'&&<div className="phone-status"><Pause size={18}/><p><strong>The universe is paused.</strong>Your powers return when the presenter resumes.</p></div>}
       {terminal&&<div className="phone-status celebration"><Rocket size={22}/><p><strong>{room.status==='won'?'Nova made it home.':room.status==='finale'?'You made that happen.':'What a universe.'}</strong>{room.totalCommands} rules rewritten. Stay here for the next round.</p></div>}
+      <ClockPowers command={command} disabled={disabled||room.status!=='live'||room.clockLocked} locked={room.clockLocked}/>
       <Composer command={command} disabled={disabled}/>
       {room.effects.length>0&&<section className="phone-world-state"><div className="quick-heading"><span>HAPPENING RIGHT NOW</span><Radio size={14}/></div><ActiveEffects room={room}/></section>}
       <div className="nova-status"><span className="nova-avatar">✦</span><div><strong>Nova is {room.progress.health>50?'hanging in there.':'having a moment.'}</strong><span>Health {room.progress.health}% · Fuel {room.progress.cells}/3</span></div><Heart size={17}/></div>

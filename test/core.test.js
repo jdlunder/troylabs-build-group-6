@@ -75,3 +75,26 @@ test('live rule history stays bounded', () => {
   for(let i=0;i<60;i++)applyPlan(room,{effects:[{id:'ducks'}]},{name:'Test'},'ducks');
   assert.equal(room.history.length,32);assert.equal(room.totalCommands,60);rooms.delete(room.code);
 });
+test('audience timer powers change authoritative remaining time and reset cleanly', () => {
+  const room=createRoom(1000),author={name:'Clock gremlin'};
+  hostAction(room,'start',1000);
+  const plus=applyPlan(room,{effects:[{id:'timeplus'}]},author,'more time',2000);
+  assert.equal(plus.timerDeltaMs,15000);assert.equal(publicRoom(room,2000).roundMs,195000);
+  const minus=applyPlan(room,{effects:[{id:'timeminus'}]},author,'steal time',3000);
+  assert.equal(minus.timerDeltaMs,-10000);assert.equal(publicRoom(room,3000).roundMs,185000);
+  hostAction(room,'lockclock',4000);assert.equal(room.clockLocked,true);
+  hostAction(room,'reset',5000);assert.equal(room.timeAdjustmentMs,0);assert.equal(room.clockLocked,false);rooms.delete(room.code);
+});
+test('timer theft preserves a fifteen-second runway and mercy is capped at five minutes remaining', () => {
+  const room=createRoom(1000),author={name:'Test'};hostAction(room,'start',1000);
+  for(let i=0;i<40;i++)applyPlan(room,{effects:[{id:'timeminus'}]},author,'steal',2000);
+  assert.equal(publicRoom(room,2000).roundMs-1000,15000);
+  for(let i=0;i<40;i++)applyPlan(room,{effects:[{id:'timeplus'}]},author,'mercy',2000);
+  assert.equal(publicRoom(room,2000).roundMs-1000,300000);rooms.delete(room.code);
+});
+test('giant duck is one boss duck, not a surprise giant astronaut', () => {
+  assert.deepEqual(compileLocal('spawn a giant duck').effects.map(e=>e.id),['duckzilla']);
+  assert.equal(compileLocal('remove 10 seconds').effects[0].id,'timeminus');
+  assert.equal(compileLocal('remove 10 seconds').effects[0].remove,undefined);
+  assert.equal(compileLocal('reverse controls and earthquake').effects.length,2);
+});

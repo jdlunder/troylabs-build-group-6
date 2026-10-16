@@ -26,7 +26,7 @@ For phones, open the presenter page through a publicly reachable HTTPS origin or
 
 ## The experience
 
-- **18 composable powers:** lava, ice, moon/heavy gravity, bouncing boulders, ducks, meteors, black hole, wind, disco, giant/tiny astronaut, shield, trampoline, bridge, confetti, healing, and slow motion.
+- **23 composable powers:** lava, ice, moon/heavy gravity, bouncing boulders, ducks, meteors, black hole, wind, disco, giant/tiny astronaut, shield, trampoline, bridge, confetti, healing, slow motion, audience timer increases/decreases, DUCKZILLA, reverse controls, and earthquakes.
 - **Text or one tap:** “moon gravity and rain 6 ducks,” “make the boulders bounce,” “stop lava and give Nova a shield.”
 - **Real live delivery:** a WebSocket event applies the command; a separate authoritative snapshot keeps participants, timers, active rules, and history consistent.
 - **Presenter control:** start, pause/resume, clear chaos, reset the room, guided run, sound, fullscreen, cinema view, and a clearly separate launch finale.
@@ -54,6 +54,8 @@ AI interpretation composes the existing mechanics. Arbitrary new physics, assets
 
 Read the [three-minute demo script](docs/DEMO.md). Short version: create a universe on the public URL, fullscreen it, invite the room, start, ask someone for lava, ask someone else to save Nova, and build to a combination such as moon gravity plus ducks. Use **Reset** between rehearsals. Keep the creator's tab and browser storage intact so you retain presenter controls.
 
+The audience can buy 15 seconds or steal 10 seconds during a live round. Theft preserves at least 15 seconds of runway; remaining time is capped at five minutes. Clock changes have a 1.5-second room cooldown and an eight-second individual cooldown. The presenter can **Lock audience clock** to keep the stage presentation on schedule. More wild powers are under the controller's expandable powers menu. See [team setup and the comedy demo sequence](docs/TEAM.md).
+
 Keyboard shortcuts: **F** fullscreen, **H** cinema controls, **P** pause/resume. These shortcuts do not fire while typing a rule.
 
 ## Tests
@@ -64,6 +66,8 @@ npm run test:load
 # Test a running public instance, including WebSocket delivery:
 node test/load.mjs https://your-public-origin.example
 ```
+
+The Vercel hosting maintainer can publish pushed main-branch changes with `npm run deploy:game` after linking the project and pulling a local OIDC credential. This restarts the game and clears its in-memory rooms. See [team instructions](docs/TEAM.md); pushing alone does not change the running game process.
 
 The load check creates a separate temporary room and connects a presenter plus 40 simulated audience clients. It verifies delivery, bounded history, idempotent command retries, presenter authorization, guest progress rejection, pause/resume, reconnect state, malformed-message handling, and a clean reset. It reports measured acknowledgement latency.
 

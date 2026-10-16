@@ -9,6 +9,11 @@ const effectSchema = z.object({
 });
 export const planSchema = z.object({ effects: z.array(effectSchema).min(1).max(MAX_EFFECTS_PER_COMMAND) });
 const MATCHERS = [
+  ['duckzilla', /\b(duckzilla|giant ducks?|huge ducks?|massive ducks?)\b/],
+  ['reverse', /\b(reverse|invert|backwards|uno)\b/],
+  ['earthquake', /\b(earthquake|shake|shaking|quake)\b/],
+  ['timeplus', /\b(more time|add.{0,12}(seconds|time)|increase.{0,12}(timer|time)|buy.{0,12}seconds|extend.{0,12}(timer|time)|mercy)\b/],
+  ['timeminus', /\b(less time|steal.{0,12}seconds|remove.{0,12}seconds|decrease.{0,12}(timer|time)|shorten.{0,12}(timer|time)|cut.{0,12}seconds)\b/],
   ['lava', /\b(lava|volcano|fire floor|floor.{0,12}fire)\b/],
   ['ice', /\b(ice|icy|slippery|frozen|freeze.{0,12}floor)\b/],
   ['moon', /\b(moon|low gravity|no gravity|zero gravity|less gravity|float|weightless|space gravity)\b/],
@@ -34,11 +39,13 @@ export function compileLocal(input) {
   const clauses = text.split(/\b(?:and|then|also)\b|[,.!?;]/);
   const found = new Map();
   for (const clause of clauses) {
+    const duckzilla = /\b(duckzilla|giant ducks?|huge ducks?|massive ducks?)\b/.test(clause);
     const requested = Number(clause.match(/\b(\d+)\b/)?.[1] || (/rain|lots|shower|many/.test(clause) ? 7 : 4));
     const count = Math.max(1, Math.min(8, requested));
     const remove = /\b(stop|remove|disable|clear|off|undo|no more)\b/.test(clause) || /^\s*no\s+(?!gravity)/.test(clause);
     for (const [id, pattern] of MATCHERS) {
-      if (pattern.test(clause) && !found.has(id)) found.set(id, { id, ...(EFFECTS[id].kind === 'spawn' ? { count } : {}), ...(remove ? { remove: true } : {}) });
+      if (duckzilla && (id === 'ducks' || id === 'giant')) continue;
+      if (pattern.test(clause) && !found.has(id)) found.set(id, { id, ...(EFFECTS[id].kind === 'spawn' ? { count } : {}), ...(remove && EFFECTS[id].kind !== 'clock' ? { remove: true } : {}) });
     }
   }
   if (!found.size) return null;

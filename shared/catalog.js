@@ -17,9 +17,15 @@ export const EFFECTS = {
   confetti: { label: 'Confetti cannon', icon: 'PartyPopper', color: '#f9d976', duration: 0, kind: 'spawn', side: 'help' },
   heal: { label: 'Save our astronaut', icon: 'Heart', color: '#ffadc3', duration: 0, kind: 'instant', side: 'help' },
   slow: { label: 'Slow motion', icon: 'Timer', color: '#a9cfff', duration: 14000, kind: 'time', side: 'help' },
+  timeplus: { label: 'Buy Nova 15 seconds', icon: 'Timer', color: '#bce8ba', duration: 0, kind: 'clock', side: 'help' },
+  timeminus: { label: 'Steal 10 seconds', icon: 'Timer', color: '#ffb4ac', duration: 0, kind: 'clock', side: 'chaos' },
+  duckzilla: { label: 'DUCKZILLA', icon: 'Bird', color: '#ffe27a', duration: 0, kind: 'spawn', side: 'chaos' },
+  reverse: { label: 'Uno reverse controls', icon: 'MoveHorizontal', color: '#d5b5fb', duration: 12000, kind: 'controls', side: 'chaos' },
+  earthquake: { label: 'Earthquake, respectfully', icon: 'Zap', color: '#ffbe92', duration: 9000, kind: 'quake', side: 'chaos' },
 };
-export const QUICK_CHAOS = ['lava', 'moon', 'boulders', 'ducks', 'meteors', 'disco'];
+export const QUICK_CHAOS = ['duckzilla', 'lava', 'moon', 'boulders', 'meteors', 'disco'];
 export const QUICK_HELP = ['shield', 'trampoline', 'bridge', 'heal', 'slow', 'confetti'];
+export const QUICK_WILD = ['ducks', 'reverse', 'earthquake', 'blackhole', 'giant', 'tiny', 'wind', 'ice', 'heavy'];
 export const MAX_HISTORY = 32;
 export const MAX_EFFECTS_PER_COMMAND = 4;
 export const ROUND_MS = 180000;

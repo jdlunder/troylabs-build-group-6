@@ -107,6 +107,12 @@ export async function createApplication({ dev = false } = {}) {
         else plan = await compileCommand(text);
         if (!plan || !planSchema.safeParse({ effects: plan.effects }).success) return ack({ ok: false, error: 'Try a world rule: lava, moon gravity, bouncy boulders, ducks, a shield, or a combination.' });
         if (joined.round !== round || ['paused','won','ended','finale'].includes(joined.status)) return ack({ ok: false, error: 'The round changed. Try your rule again.' });
+        if (plan.effects.some(effect => EFFECTS[effect.id].kind === 'clock')) {
+          if (joined.status !== 'live') return ack({ ok: false, error: 'Clock powers unlock when the round starts.' });
+          if (joined.clockLocked) return ack({ ok: false, error: 'Mission control locked the clock. Try another power.' });
+          if (Date.now() - joined.lastClockChange < 1500 || Date.now() - (participant.lastClockChange || 0) < 8000) return ack({ ok: false, error: 'The clock just changed. Pick another power for a moment.' });
+          joined.lastClockChange = Date.now(); participant.lastClockChange = Date.now();
+        }
         const author = { name: participant.name, color: participant.color };
         const event = applyPlan(joined, plan, author, text);
         const receipt = { ok: true, event, serverMs: Date.now() - now };
@@ -123,7 +129,7 @@ export async function createApplication({ dev = false } = {}) {
     });
     socket.on('host:action', (payload = {}, ack = () => {}) => {
       if (!isHost()) return ack({ ok: false, error: 'Presenter controls are private.' });
-      if (!['start', 'pause', 'reset', 'clear', 'finale'].includes(payload.action)) return ack({ ok: false, error: 'Unknown presenter control.' });
+      if (!['start', 'pause', 'reset', 'clear', 'finale', 'lockclock'].includes(payload.action)) return ack({ ok: false, error: 'Unknown presenter control.' });
       hostAction(joined, payload.action);
       io.to(joined.code).emit('world:control', { action: payload.action, round: joined.round });
       broadcast(joined);
@@ -154,7 +160,7 @@ export async function createApplication({ dev = false } = {}) {
     const now = Date.now();
     for (const [code, room] of rooms) {
       let changed = expireEffects(room, now);
-      if (room.status === 'live' && now - room.startedAt - room.pauseDuration >= ROUND_MS) { room.status = 'ended'; changed = true; }
+      if (room.status === 'live' && now - room.startedAt - room.pauseDuration >= ROUND_MS + room.timeAdjustmentMs) { room.status = 'ended'; changed = true; }
       for (const [id, p] of room.participants) if (p.sockets.size === 0 && now - p.lastSeen > 60000) room.participants.delete(id);
       if (now - room.lastActivity > 7200000) { io.to(code).emit('room:closed'); rooms.delete(code); }
       else if (changed) broadcast(room);

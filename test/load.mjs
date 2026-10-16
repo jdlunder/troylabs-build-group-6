@@ -70,6 +70,12 @@ try {
   audience[0].socket.emit('room:join',null);
   const health=await (await fetch(base+'/api/health')).json();
   assert.equal(health.ok,true,'Malformed messages must not crash the server');
+  const mercy=await ack(host,'world:command',{text:'add 15 seconds',effectId:'timeplus',requestId:'mercy'});
+  assert.equal(mercy.ok,true);assert.equal(mercy.event.timerDeltaMs,15000);
+  await ack(host,'host:action',{action:'lockclock'});
+  const {socket:clockProbe}=await connect({code,name:'Clock permission probe',clientId:'clock-probe'});
+  const locked=await ack(clockProbe,'world:command',{text:'steal 10 seconds',effectId:'timeminus',requestId:'locked-clock'});
+  assert.equal(locked.ok,false);assert.match(locked.error,/locked/);
   await ack(host,'host:action',{action:'reset'});
   state=await (await fetch(base+'/api/rooms/'+code)).json();
   assert.equal(state.totalCommands,0);assert.equal(state.history.length,0);assert.equal(state.effects.length,0);assert.equal(state.status,'lobby');

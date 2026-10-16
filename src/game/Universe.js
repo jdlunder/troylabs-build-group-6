@@ -199,6 +199,8 @@ export class Universe {
         continue;
       }
       if(effect.id==='ducks' || effect.id==='boulders') this.spawn(effect.id,effect.count || 4);
+      if(effect.id==='duckzilla') this.spawn('duckzilla',1);
+      if(effect.id==='earthquake') this.objects.forEach(object=>{object.velocity.y+=3;});
       if(effect.id==='confetti') this.burst(v(0,4,0),90,true);
       if(effect.id==='heal') { this.health=100; this.burst(this.playerPosition.clone().add(v(0,1,0)),35,true); }
     }
@@ -221,9 +223,10 @@ export class Universe {
   spawn(type, count=4) {
     for(let i=0;i<count;i++) {
       if(this.objects.length>=30) this.removeObject(this.objects[0]);
-      const radius=type==='ducks'?.48:type==='meteors'?.6:rand(.4,.75);
+      const duck=type==='ducks'||type==='duckzilla';
+      const radius=type==='duckzilla'?2.4:duck?.48:type==='meteors'?.6:rand(.4,.75);
       let mesh;
-      if(type==='ducks') {
+      if(duck) {
         mesh=new THREE.Group();
         const body=this.mesh(new THREE.SphereGeometry(.42,12,8),material(0xf6d45d),0,0,0,mesh); body.scale.set(1,.85,1.3);
         this.mesh(new THREE.SphereGeometry(.27,12,8),material(0xfce17c),0,.37,.32,mesh);
@@ -234,7 +237,8 @@ export class Universe {
         mesh=new THREE.Mesh(new THREE.DodecahedronGeometry(radius,0),material(color,type==='meteors'?{emissive:0xeb6945,emissiveIntensity:.6}:{}));
         mesh.castShadow=true; mesh.receiveShadow=true;
       }
-      mesh.position.set(rand(-7,7),rand(7,12),rand(-4.5,4.5)); this.scene.add(mesh);
+      if(type==='duckzilla')mesh.scale.setScalar(5);
+      mesh.position.set(type==='duckzilla'?0:rand(-7,7),rand(7,12),type==='duckzilla'?0:rand(-4.5,4.5)); this.scene.add(mesh);
       this.objects.push({mesh,type,radius,velocity:v(rand(-2,2),type==='meteors'?-7:rand(-1,2),rand(-2,2)),born:this.elapsed,spin:v(rand(-2,2),rand(-2,2),rand(-2,2))});
     }
   }
@@ -292,6 +296,7 @@ export class Universe {
         const length=Math.hypot(dx,dz); if(length>1){dx/=length;dz/=length;}
       }
     }
+    if(this.active('reverse')){dx=-dx;dz=-dz;}
     const ease=this.active('ice')?1.5:12;
     const speed=this.auto&&!this.preview?2.4:4.2;
     this.playerVelocity.x=THREE.MathUtils.damp(this.playerVelocity.x,dx*speed,ease,dt);
@@ -355,7 +360,7 @@ export class Universe {
       }
       o.mesh.position.addScaledVector(o.velocity,dt);
       o.mesh.rotation.x+=o.spin.x*dt; o.mesh.rotation.z+=o.spin.z*dt;
-      if(o.type==='ducks') o.mesh.rotation.x=0;
+      if(o.type==='ducks'||o.type==='duckzilla') o.mesh.rotation.x=0;
       const p=o.mesh.position, floor=this.ground(p.x,p.z)+o.radius;
       if(Math.abs(p.x)<9 && Math.abs(p.z)<6 && p.y<floor && o.velocity.y<0) {
         if(o.type==='meteors') { this.burst(p,22); this.damage(Math.hypot(p.x-this.playerPosition.x,p.z-this.playerPosition.z)<2?15:0); this.removeObject(o); continue; }
@@ -381,6 +386,8 @@ export class Universe {
     this.hero.visible=false; this.burst(v(7,2,0),100,true); this.sound();
   }
   updateVisuals(dt) {
+    const shake=this.active('earthquake')?.24:0;
+    this.camera.position.set(21+Math.sin(this.elapsed*57)*shake,24+Math.cos(this.elapsed*43)*shake*.6,29+Math.sin(this.elapsed*39)*shake);
     const lava=this.active('lava'),ice=this.active('ice'),disco=this.active('disco');
     this.tiles.forEach((tile,i)=>{
       const color=disco?new THREE.Color().setHSL((this.elapsed*.08+i*.035)%1,.5,.63):new THREE.Color(lava?0xef7558:ice?0xafe7ed:tile.userData.base);

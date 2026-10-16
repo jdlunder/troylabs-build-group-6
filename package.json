@@ -14,7 +14,8 @@
     "build": "vite build",
     "start": "node server/index.js",
     "test": "node --test test/*.test.js",
-    "test:load": "node test/load.mjs"
+    "test:load": "node test/load.mjs",
+    "deploy:game": "node scripts/deploy-game.mjs"
   },
   "repository": {
     "type": "git",
