@@ -153,7 +153,7 @@ function ClockPowers({command,disabled,locked}) {
     setBusy(true);
     const result=await command(EFFECTS[id].label,id);
     setBusy(false);
-    setNotice(result.ok?(result.event.timerDeltaMs>0?'Mercy granted. Nova owes you one.':'Time stolen. Absolutely villainous.'):result.error);
+    setNotice(result.ok?(result.event.timerDeltaMs===0?'Clock limit reached. Try another power.':result.event.timerDeltaMs>0?'Mercy granted. Nova owes you one.':'Time stolen. Absolutely villainous.'):result.error);
   }
   return <section className="clock-powers"><div className="quick-heading"><span>YOU ALSO OWN THE CLOCK</span><Timer size={14}/></div><div className="clock-buttons"><button disabled={disabled||busy} onClick={()=>change('timeplus')}><strong>+15s</strong><span>Show mercy</span></button><button disabled={disabled||busy} onClick={()=>change('timeminus')}><strong>−10s</strong><span>Choose violence</span></button></div><p role="status">{notice || (locked?'Mission control locked the clock.':disabled?'Clock powers unlock when the round starts.':'One person can save the mission. Another can steal its time.')}</p></section>;
 }

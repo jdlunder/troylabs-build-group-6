@@ -19,7 +19,7 @@ export function applyPlan(room, plan, author, text, now = Date.now()) {
     const config = EFFECTS[effect.id];
     if (config.kind === 'clock') {
       const remaining = ROUND_MS + room.timeAdjustmentMs - (now - room.startedAt - room.pauseDuration);
-      const next = Math.max(15000, Math.min(300000, remaining + (effect.id === 'timeplus' ? 15000 : -10000)));
+      const next = effect.id === 'timeplus' ? Math.min(300000, remaining + 15000) : Math.min(remaining, Math.max(15000, remaining - 10000));
       const delta = next - remaining;
       room.timeAdjustmentMs += delta;
       event.timerDeltaMs = (event.timerDeltaMs || 0) + delta;

@@ -98,3 +98,8 @@ test('giant duck is one boss duck, not a surprise giant astronaut', () => {
   assert.equal(compileLocal('remove 10 seconds').effects[0].remove,undefined);
   assert.equal(compileLocal('reverse controls and earthquake').effects.length,2);
 });
+test('clock theft cannot accidentally grant time when less than fifteen seconds remain', () => {
+  const room=createRoom(1000);hostAction(room,'start',1000);
+  const event=applyPlan(room,{effects:[{id:'timeminus'}]},{name:'Test'},'steal',177000);
+  assert.equal(event.timerDeltaMs,0);assert.equal(room.timeAdjustmentMs,0);rooms.delete(room.code);
+});

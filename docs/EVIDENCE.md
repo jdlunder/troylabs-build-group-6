@@ -24,6 +24,16 @@ Recorded 2026-10-16. These are observed checks, not estimates of venue Wi-Fi per
 
 ## Boundaries
 
+## Audience chaos upgrade
+
+- Added clock mercy/theft, clock locking, DUCKZILLA, reverse controls, earthquakes, and an expanded phone powers menu.
+- Focused tests cover authoritative timer adjustment, reset, lower/upper bounds, near-expiry theft, and giant-duck interpretation.
+- The upgraded public runtime passed the 40-client WebSocket delivery test plus timer mutation and locked-clock rejection. That run measured **88.7 ms median / 132.4 ms p95** acknowledgement time.
+- A public Chromium flow used two phone pages to spawn DUCKZILLA, add 15 seconds, remove 10 seconds, lock the audience clock, and activate reverse controls. The public room's authoritative total round duration changed to 195000 ms and then 185000 ms. The stage rendered the giant duck and reverse effect with no console errors.
+- `docs/TEAM.md` contains the team roles, editable code paths, collaboration setup, hosting maintainer command, and a timed comedy demo sequence.
+
+## Remaining evidence boundaries
+
 - No real 40-person audience or venue Wi-Fi test has been performed.
 - Optional model-provider interpretation has not been exercised with live credentials.
 - Commands become validated effect data. This build does not execute generated JavaScript or invent new mechanics on demand.
